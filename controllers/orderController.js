@@ -20,12 +20,24 @@ exports.getUserOrders = async (req, res) => {
 };
 
 exports.createOrder = async (req, res) => {
-  const order = new Order(req.body);
   try {
+    const { items, totalAmount, address, description } = req.body;
+    const userId = req.user._id;
+
+    const order = new Order({
+      userId,
+      orderId: Date.now().toString(), // Generate a unique orderId
+      items,
+      totalAmount,
+      address,
+      description
+    });
+
     const newOrder = await order.save();
-    res.status(201).json(newOrder);
+    res.status(201).json({ success: true, order: newOrder });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating order:', error);
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
