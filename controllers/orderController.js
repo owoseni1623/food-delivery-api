@@ -11,7 +11,7 @@ exports.getAllOrders = async (req, res) => {
 
 exports.getUserOrders = async (req, res) => {
   try {
-    const userId = req.user._id; // Assuming you have user info in the request
+    const userId = req.user._id; 
     const orders = await Order.find({ userId: userId }).populate('items.menuItem');
     res.json(orders);
   } catch (error) {

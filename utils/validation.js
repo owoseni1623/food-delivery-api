@@ -1,33 +1,3 @@
-// const Joi = require("joi");
-
-// const registerValidation = (data) => {
-//   const schema = Joi.object({
-//     email: Joi.string().email().required(),
-//     password: Joi.string().min(6).required()
-//   });
-//   return schema.validate(data);
-// };
-
-// const loginValidation = (data) => {
-//   const schema = Joi.object({
-//     email: Joi.string().email().required(),
-//     password: Joi.string().required()
-//   });
-//   return schema.validate(data);
-// };
-
-// const taskValidation = (data) => {
-//   const schema = Joi.object({
-//     title: Joi.string().required(),
-//     description: Joi.string(),
-//     completed: Joi.boolean()
-//   });
-//   return schema.validate(data);
-// };
-
-// module.exports = { registerValidation, loginValidation, taskValidation };
-
-
 exports.validateEmail = (email) => {
     const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());

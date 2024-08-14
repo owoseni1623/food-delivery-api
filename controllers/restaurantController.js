@@ -29,7 +29,7 @@ const upload = multer({
   }
 }).single('image');
 
-// Restaurant operations
+
 exports.createRestaurant = async (req, res) => {
   try {
     if (!req.file) {
@@ -48,7 +48,7 @@ exports.createRestaurant = async (req, res) => {
       address,
       rating: parseFloat(rating),
       openingHours,
-      image: `/uploads/${req.file.filename}` // Correct the path
+      image: `/uploads/${req.file.filename}`
     });
 
     await restaurant.save();
