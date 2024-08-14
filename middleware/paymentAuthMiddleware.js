@@ -6,8 +6,8 @@ const paymentAuthMiddleware = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
     console.log("Received token:", token);
    
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'No token provided' });
+    if (!token || !token.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Invalid token format' });
     }
    
     if (!process.env.JWT_SECRET) {

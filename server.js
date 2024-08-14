@@ -7,7 +7,6 @@ const orderRoutes = require("./routes/orderRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
-// const emailService = require("./utils/emailService");
 const emailRoutes = require("./routes/emailRoutes")
 const path = require("path");
 
@@ -17,7 +16,7 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: "https://roadrunner-food-ordering1.vercel.app",
+  origin: process.env.FRONTEND_URL,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
@@ -75,6 +74,11 @@ app.get('/api/restaurants', async (req, res) => {
 // Example route handling
 app.get('/', (req, res) => {
   res.send('Server is running!');
+});
+
+// Catch-all route for undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
 // Error handling middleware

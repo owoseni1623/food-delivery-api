@@ -57,11 +57,11 @@ const initializePayment = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error:', error.response ? error.response.data : error.message);
+    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred during payment initiation',
-      error: error.response ? error.response.data : error.message
+      error: error.response?.data || error.message
     });
   }
 };
@@ -101,11 +101,11 @@ const verifyPayment = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error:', error.response ? error.response.data : error.message);
+    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred during payment verification',
-      error: error.response ? error.response.data : error.message
+      error: error.response?.data || error.message
     });
   }
 };
