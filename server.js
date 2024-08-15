@@ -57,7 +57,8 @@ app.use('/api/email', emailRoutes);
 // New route to handle /api/restaurants
 app.get('/api/restaurants', async (req, res) => {
   try {
-    const Menu = require('./models/Menu'); 
+    const Menu = require('./models/Menu');
+    
     const menuItems = await Menu.find({});
     const restaurants = [{
       id: 'default-restaurant',

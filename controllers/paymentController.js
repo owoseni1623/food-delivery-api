@@ -8,7 +8,7 @@ if (!FLW_SECRET_KEY) {
   throw new Error("FLW_SECRET_KEY is not defined");
 }
 
-const initializePayment = async (req, res) => {
+exports.initializePayment = async (req, res) => {
   const { amount, email, firstName, lastName, phone, address, description, items } = req.body;
 
   try {
@@ -66,7 +66,7 @@ const initializePayment = async (req, res) => {
   }
 };
 
-const verifyPayment = async (req, res) => {
+exports.verifyPayment = async (req, res) => {
   const { transaction_id } = req.query;
 
   try {
@@ -109,5 +109,3 @@ const verifyPayment = async (req, res) => {
     });
   }
 };
-
-module.exports = { initializePayment, verifyPayment };

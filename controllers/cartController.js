@@ -1,6 +1,6 @@
 const User = require('../models/User');
 
-const addToCart = async (req, res) => {
+exports.addToCart = async (req, res) => {
   try {
     console.log('Received request body:', req.body);
     const userId = req.user.id;
@@ -49,7 +49,7 @@ const addToCart = async (req, res) => {
   }
 };
 
-const removeFromCart = async (req, res) => {
+exports.removeFromCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const { itemId } = req.body;
@@ -80,7 +80,7 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-const getCart = async (req, res) => {
+exports.getCart = async (req, res) => {
   try {
     const userId = req.user.id;
     let user = await User.findById(userId);
@@ -96,5 +96,3 @@ const getCart = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching cart" });
   }
 };
-
-module.exports = { addToCart, removeFromCart, getCart };
