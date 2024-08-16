@@ -11,14 +11,7 @@ const createToken = (id) => {
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
   
-  const {
-    firstName,
-    lastName,
-    password,
-    email,
-    phone,
-    address,
-  } = req.body;
+  const { firstName, lastName, password, email, phone, address } = req.body;
 
   try {
     if (!firstName || !lastName || !password || !email || !phone) {
@@ -69,115 +62,29 @@ exports.registerUser = async (req, res) => {
       message: "User registered successfully. Please check your email to verify your account.",
       token
     });
-
   } catch (error) {
     console.error('Error during registration:', error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    let errorMessage = "Server Error";
+    if (error.name === 'ValidationError') {
+      errorMessage = Object.values(error.errors).map(val => val.message).join(', ');
+    } else if (error.code === 11000) {
+      errorMessage = "Email already exists";
+    }
+    res.status(500).json({ success: false, message: errorMessage, error: error.message });
   }
 };
 
 exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Please provide email and password" });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
-
-    if (!user.isVerified) {
-      return res.status(401).json({ success: false, message: "Please verify your email before logging in" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
-
-    const token = createToken(user._id);
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
+  // Implement login logic here
+  res.status(501).json({ message: "Login functionality not implemented yet" });
 };
 
 exports.getUserProfile = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await User.findById(userId).select('-password');
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({
-      success: true,
-      user: user
-    });
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  // Implement get user profile logic here
+  res.status(501).json({ message: "Get user profile functionality not implemented yet" });
 };
 
 exports.updateUserProfile = async (req, res) => {
-  const userId = req.user.id;
-  const { firstName, lastName, email, phone, street, city, state, country } = req.body;
-
-  try {
-    const updatedData = { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      address: { 
-        street: street || '', 
-        city: city || '', 
-        state: state || '', 
-        country: country || '' 
-      }
-    };
-
-    Object.keys(updatedData).forEach(key => 
-      (updatedData[key] === undefined) && delete updatedData[key]
-    );
-
-    if (updatedData.address) {
-      Object.keys(updatedData.address).forEach(key => 
-        (updatedData.address[key] === undefined) && delete updatedData.address[key]
-      );
-    }
-
-    if (req.file) {
-      updatedData.avatar = req.file.path;
-    }
-
-    const user = await User.findByIdAndUpdate(userId, updatedData, { new: true, runValidators: true })
-      .select('-password');
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  // Implement update user profile logic here
+  res.status(501).json({ message: "Update user profile functionality not implemented yet" });
 };
