@@ -9,7 +9,6 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
 const emailRoutes = require("./routes/emailRoutes")
 const path = require("path");
-
 require('dotenv').config();
 
 const app = express();
@@ -53,6 +52,7 @@ app.use("/api/cart", cartRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api', restaurantRoutes);
 app.use('/api/email', emailRoutes);
+
 
 // New route to handle /api/restaurants
 app.get('/api/restaurants', async (req, res) => {
