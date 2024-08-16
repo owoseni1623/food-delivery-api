@@ -105,6 +105,8 @@ const createToken = (id) => {
 
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
+  console.log('Verification URL:', verificationUrl);
+  console.log('Sending email to:', email);
   
   const { firstName, lastName, password, email, phone, address } = req.body;
   try {
@@ -143,12 +145,14 @@ exports.registerUser = async (req, res) => {
       text: `Please verify your email by clicking the link: ${verificationUrl}`
     };
     await transporter.sendMail(mailOptions);
+    console.log('Verification email sent successfully');
     res.status(201).json({
       success: true,
       message: "User registered successfully. Please check your email to verify your account.",
       token
     });
   } catch (error) {
+    console.error('Error sending verification email:', error);
     console.error('Error during registration:', error);
     let errorMessage = "Server Error";
     if (error.name === 'ValidationError') {
