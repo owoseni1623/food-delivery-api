@@ -40,6 +40,7 @@ exports.registerUser = async (req, res) => {
       address,
       password: hashedPassword,
       verificationToken,
+      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
       isVerified: false,
     });
     
