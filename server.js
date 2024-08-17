@@ -44,6 +44,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.options('*', cors());
+
 // Routes
 app.use("/api/users", userRoutes);
 app.use('/api/menu', menuRoutes);
