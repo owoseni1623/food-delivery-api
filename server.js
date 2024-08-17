@@ -46,6 +46,10 @@ app.use((req, res, next) => {
 
 app.options('*', cors());
 
+app.use((req, res, next) => {
+  console.log(`Received ${req.method} request for ${req.url}`);
+  next();
+});
 // Routes
 app.use("/api/users", userRoutes);
 app.use('/api/menu', menuRoutes);
@@ -55,6 +59,11 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api', restaurantRoutes);
 app.use('/api/email', emailRoutes);
 
+
+app.use('*', (req, res) => {
+  console.log(`No route found for ${req.method} ${req.url}`);
+  res.status(404).json({ message: 'Route not found' });
+});
 
 // New route to handle /api/restaurants
 app.get('/api/restaurants', async (req, res) => {
