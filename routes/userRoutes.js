@@ -28,11 +28,16 @@
 
 
 const express = require('express');
-const router = express.Router();
 const { registerUser, loginUser, getUserProfile, updateUserProfile } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
+
+
+
+const router = express.Router();
+
+
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -50,5 +55,7 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
+
+
 
 module.exports = router;
