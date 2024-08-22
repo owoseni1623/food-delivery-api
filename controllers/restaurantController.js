@@ -5,7 +5,6 @@ const mongoose = require("mongoose")
 const multer = require('multer');
 const path = require('path');
 
-
 const UPLOAD_PATH = 'uploads/';
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 
@@ -29,37 +28,43 @@ const upload = multer({
   }
 }).single('image');
 
-
 exports.createRestaurant = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No image file uploaded' });
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(500).json({ success: false, message: err.message });
     }
 
-    const { name, cuisineType, address, rating, openingHours } = req.body;
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No image file uploaded' });
+      }
 
-    if (!name || !cuisineType || !address || !rating || !openingHours) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+      const { name, cuisineType, address, rating, openingHours } = req.body;
+
+      if (!name || !cuisineType || !address || !rating || !openingHours) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+      }
+
+      const restaurant = new Restaurant({
+        name,
+        cuisineType,
+        address,
+        rating: parseFloat(rating),
+        openingHours,
+        image: `/uploads/${req.file.filename}`
+      });
+
+      await restaurant.save();
+
+      res.status(201).json({ success: true, message: 'Restaurant created successfully', restaurant });
+    } catch (error) {
+      console.error('Error creating restaurant:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
     }
-
-    const restaurant = new Restaurant({
-      name,
-      cuisineType,
-      address,
-      rating: parseFloat(rating),
-      openingHours,
-      image: `/uploads/${req.file.filename}`
-    });
-
-    await restaurant.save();
-
-    res.status(201).json({ success: true, message: 'Restaurant created successfully', restaurant });
-  } catch (error) {
-    console.error('Error creating restaurant:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  });
 };
-
 
 exports.getAllRestaurants = async (req, res) => {
   try {
@@ -82,19 +87,27 @@ exports.getRestaurant = async (req, res) => {
 };
 
 exports.updateRestaurant = async (req, res) => {
-  try {
-    let updateData = req.body;
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(500).json({ success: false, message: err.message });
     }
 
-    const updatedRestaurant = await Restaurant.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!updatedRestaurant) 
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    res.json(updatedRestaurant);
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
-  }
+    try {
+      let updateData = req.body;
+      if (req.file) {
+        updateData.image = `/uploads/${req.file.filename}`;
+      }
+
+      const updatedRestaurant = await Restaurant.findByIdAndUpdate(req.params.id, updateData, { new: true });
+      if (!updatedRestaurant) 
+        return res.status(404).json({ success: false, message: 'Restaurant not found' });
+      res.json(updatedRestaurant);
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
 };
 
 exports.deleteRestaurant = async (req, res) => {
@@ -108,70 +121,68 @@ exports.deleteRestaurant = async (req, res) => {
   }
 };
 
-// Menu operations
-exports.getAllMenuItems = async (req, res) => {
-  try {
-    const menuItems = await Menu.find({});
-    res.json(menuItems);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 exports.createMenuItem = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No image file uploaded' });
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(500).json({ success: false, message: err.message });
     }
 
-    const { name, description, price, category } = req.body;
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No image file uploaded' });
+      }
 
-    if (!name || !description || !price || !category) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+      const { name, description, price, category } = req.body;
+
+      if (!name || !description || !price || !category) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+      }
+
+      const menuItem = {
+        name,
+        description,
+        price: parseFloat(price),
+        category,
+        image: `/uploads/${req.file.filename}`
+      };
+
+      const restaurantId = req.params.restaurantId;
+      console.log('Received restaurant ID:', restaurantId);
+
+      if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+        console.log('Invalid restaurant ID format:', restaurantId);
+        return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+      }
+
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant) {
+        console.log('Restaurant not found:', restaurantId);
+        return res.status(404).json({ success: false, message: 'Restaurant not found' });
+      }
+
+      restaurant.menu.push(menuItem);
+      await restaurant.save();
+
+      res.status(201).json({ success: true, message: 'Menu item created successfully', menuItem });
+    } catch (error) {
+      console.error('Error creating menu item:', error);
+      res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
-
-    const menuItem = {
-      name,
-      description,
-      price: parseFloat(price),
-      category,
-      image: `/uploads/${req.file.filename}`
-    };
-
-    // Get the restaurant ID from req.params
-    const restaurantId = req.params.restaurantId;
-    console.log('Received restaurant ID:', restaurantId);
-
-    // Verify the ID format
-    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
-      console.log('Invalid restaurant ID format:', restaurantId);
-      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
-    }
-
-    const restaurant = await Restaurant.findById(restaurantId);
-    if (!restaurant) {
-      console.log('Restaurant not found:', restaurantId);
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    }
-
-    restaurant.menu.push(menuItem);
-    await restaurant.save();
-
-    res.status(201).json({ success: true, message: 'Menu item created successfully', menuItem });
-  } catch (error) {
-    console.error('Error creating menu item:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
+  });
 };
-
-
-
 
 exports.getMenuItem = async (req, res) => {
   try {
-    const menuItem = await Menu.findById(req.params.menuId);
-    if (!menuItem) 
-        return res.status(404).json({ success: false, message: 'Menu item not found' });
+    const restaurant = await Restaurant.findById(req.params.restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+    const menuItem = restaurant.menu.id(req.params.menuId);
+    if (!menuItem) {
+      return res.status(404).json({ success: false, message: 'Menu item not found' });
+    }
     res.json(menuItem);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -179,35 +190,57 @@ exports.getMenuItem = async (req, res) => {
 };
 
 exports.updateMenuItem = async (req, res) => {
-  try {
-    let updateData = req.body;
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+  upload(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(500).json({ success: false, message: err.message });
     }
 
-    const updatedMenuItem = await Menu.findByIdAndUpdate(req.params.menuId, updateData, { new: true });
-    if (!updatedMenuItem) 
+    try {
+      const restaurant = await Restaurant.findById(req.params.restaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ success: false, message: 'Restaurant not found' });
+      }
+      
+      const menuItem = restaurant.menu.id(req.params.menuId);
+      if (!menuItem) {
         return res.status(404).json({ success: false, message: 'Menu item not found' });
-    res.json(updatedMenuItem);
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
-  }
+      }
+
+      Object.assign(menuItem, req.body);
+      if (req.file) {
+        menuItem.image = `/uploads/${req.file.filename}`;
+      }
+
+      await restaurant.save();
+      res.json(menuItem);
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
 };
 
 exports.deleteMenuItem = async (req, res) => {
   try {
-    const menuItem = await Menu.findByIdAndDelete(req.params.menuId);
+    const restaurant = await Restaurant.findById(req.params.restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+    
+    const menuItem = restaurant.menu.id(req.params.menuId);
     if (!menuItem) {
       return res.status(404).json({ success: false, message: 'Menu item not found' });
     }
+
+    menuItem.remove();
+    await restaurant.save();
     res.json({ success: true, message: 'Menu item deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
-// Cart operations
 exports.addToCart = async (req, res) => {
   try {
     const { userId, item } = req.body;

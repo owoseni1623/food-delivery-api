@@ -1,22 +1,3 @@
-// const express = require('express');
-// const orderController = require('../controllers/orderController');
-// const authMiddleware = require("../middleware/authMiddleware");
-
-// const router = express.Router();
-
-// router.get('/orderlist', authMiddleware, orderController.getAllOrders);
-// router.get('/user-orders', authMiddleware, orderController.getUserOrders);
-// router.post('/orderOut', authMiddleware, orderController.createOrder);
-// router.get('/get/:id', authMiddleware, orderController.getOrder);
-// router.put('/edit/:id', authMiddleware, orderController.updateOrderStatus);
-// router.get('/', authMiddleware, orderController.getOrders);
-// router.delete('/delete/:id', authMiddleware, orderController.deleteOrder);
-
-// module.exports = router;
-
-
-
-
 const express = require('express');
 const orderController = require('../controllers/orderController');
 const authMiddleware = require("../middleware/authMiddleware");

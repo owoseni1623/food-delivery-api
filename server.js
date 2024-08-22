@@ -1,5 +1,5 @@
 const express = require("express");
-const connectDB = require("./config/db");
+const connectDB = require("./config/db")
 const cors = require("cors");
 const menuRoutes = require("./routes/menuRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -7,17 +7,19 @@ const orderRoutes = require("./routes/orderRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
-const emailRoutes = require("./routes/emailRoutes")
+const emailRoutes = require("./routes/emailRoutes");
+const profileRoutes = require("./routes/profileRoutes")
 const path = require("path");
 require('dotenv').config();
 
 const app = express();
+connectDB();
 
 // CORS configuration
 app.use(cors({
-  origin: "https://food-delivery-mauve-mu.vercel.app",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  // allowedHeaders: ["Content-Type", "Authorization"],
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 }));
 
@@ -28,15 +30,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Connect to MongoDB
-connectDB()
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Failed to connect to MongoDB', error);
-    process.exit(1);
-  });
+
+app.options('*', cors());
+
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -44,12 +40,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.options('*', cors());
-
-app.use((req, res, next) => {
-  console.log(`Received ${req.method} request for ${req.url}`);
-  next();
-});
 // Routes
 app.use("/api/users", userRoutes);
 app.use('/api/menu', menuRoutes);
@@ -58,12 +48,7 @@ app.use("/api/cart", cartRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api', restaurantRoutes);
 app.use('/api/email', emailRoutes);
-
-
-app.use('*', (req, res) => {
-  console.log(`No route found for ${req.method} ${req.url}`);
-  res.status(404).json({ message: 'Route not found' });
-});
+app.use('/api/profile', profileRoutes)
 
 // New route to handle /api/restaurants
 app.get('/api/restaurants', async (req, res) => {
@@ -90,6 +75,7 @@ app.get('/', (req, res) => {
 
 // Catch-all route for undefined routes
 app.use('*', (req, res) => {
+  console.log(`No route found for ${req.method} ${req.url}`);
   res.status(404).json({ message: 'Route not found' });
 });
 

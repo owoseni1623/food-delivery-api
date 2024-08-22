@@ -1,119 +1,135 @@
 const User = require('../models/User');
 
+// Utility function for alerts
+const sendAlert = (message, isDev) => {
+  if (isDev) {
+    console.log('DEV ALERT:', message);
+  } else {
+    console.log('PROD ALERT:', message);
+    // Sentry.captureMessage(`PROD ALERT: ${message}`);
+  }
+};
+
 exports.addToCart = async (req, res) => {
+  const { productId, quantity, name, price, image } = req.body;
+  const isDev = process.env.NODE_ENV === 'development';
+
   try {
-    console.log('addToCart called for user:', req.user.id);
-    console.log('Received request body:', req.body);
-    const userId = req.user.id;
-    const { itemId, item, phone } = req.body;
-    if (!itemId || !item || !phone) {
-      console.log('Missing required fields:', { itemId, item, phone });
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
-    let user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     if (!user) {
-      console.log('User not found:', userId);
+      sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    // Update user's phone if it's not set
-    if (!user.phone) {
-      user.phone = phone;
-      console.log('Updated user phone:', phone);
-    }
-    let cartData = user.cartData || [];
-    const existingItemIndex = cartData.findIndex(cartItem => cartItem.id === itemId);
+
+    const existingItemIndex = user.cartData.findIndex(item => item.id === productId);
+    const imageUrl = image ? `${req.protocol}://${req.get('host')}/uploads/${image}` : 'https://via.placeholder.com/300x300';
+
     if (existingItemIndex > -1) {
-      cartData[existingItemIndex].quantity += 1;
-      console.log('Increased quantity for existing item:', itemId);
+      user.cartData[existingItemIndex].quantity += quantity;
     } else {
-      // Ensure the image URL is correctly formatted and added
-      const newItem = {
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: 1,
-        image: item.image.startsWith('/') ? item.image : `/uploads/${item.image}`
-      };
-      console.log('Adding new item to cart:', newItem);
-      cartData.push(newItem);
+      user.cartData.push({ id: productId, name, price, quantity, image: imageUrl });
     }
-    user.cartData = cartData;
+
     await user.save();
-    console.log('Updated cart data:', JSON.stringify(user.cartData, null, 2));
-    res.json({ success: true, cartData: user.cartData });
+    sendAlert(`Added to cart: ${name}`, isDev);
+    res.status(200).json({ success: true, message: "Product added to cart", cartData: user.cartData });
   } catch (error) {
-    console.error('Error in addToCart:', error);
-    res.status(500).json({ success: false, message: "Error adding to cart", error: error.message });
+    sendAlert(`Error adding to cart: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
 
 exports.removeFromCart = async (req, res) => {
+  const isDev = process.env.NODE_ENV === 'development';
   try {
-    console.log('removeFromCart called for user:', req.user.id);
     const userId = req.user.id;
     const { itemId } = req.body;
-    console.log('Removing item:', itemId);
     let user = await User.findById(userId);
     if (!user) {
-      console.log('User not found:', userId);
+      sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    let cartData = user.cartData || [];
-    const itemIndex = cartData.findIndex(item => item.id === itemId);
+
+    const itemIndex = user.cartData.findIndex(item => item.id === itemId);
     if (itemIndex > -1) {
-      if (cartData[itemIndex].quantity > 1) {
-        cartData[itemIndex].quantity -= 1;
-        console.log('Decreased quantity for item:', itemId);
-      } else {
-        cartData.splice(itemIndex, 1);
-        console.log('Removed item from cart:', itemId);
-      }
+      user.cartData.splice(itemIndex, 1);
+      await user.save();
+      sendAlert(`Removed item from cart: ${itemId}`, isDev);
+      res.json({ success: true, cartData: user.cartData });
     } else {
-      console.log('Item not found in cart:', itemId);
+      sendAlert(`Item not found in cart: ${itemId}`, isDev);
+      return res.status(404).json({ success: false, message: "Item not found in cart" });
     }
-    user.cartData = cartData;
-    await user.save();
-    console.log('Updated cart data:', JSON.stringify(cartData, null, 2));
-    res.json({ success: true, cartData });
   } catch (error) {
-    console.error('Error in removeFromCart:', error);
+    sendAlert(`Error in removeFromCart: ${error.message}`, isDev);
     res.status(500).json({ success: false, message: "Error removing from cart", error: error.message });
   }
 };
 
 exports.getCart = async (req, res) => {
+  const isDev = process.env.NODE_ENV === 'development';
   try {
-    console.log('getCart called for user:', req.user.id);
     const userId = req.user.id;
     let user = await User.findById(userId);
     if (!user) {
-      console.log('User not found:', userId);
+      sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    let cartData = user.cartData || [];
-    console.log('Cart data from database:', JSON.stringify(cartData, null, 2));
-    res.json({ success: true, cartData });
+
+    sendAlert(`Cart data retrieved: ${JSON.stringify(user.cartData)}`, isDev);
+    res.json({ success: true, cartData: user.cartData });
   } catch (error) {
-    console.error('Error in getCart:', error);
+    sendAlert(`Error in getCart: ${error.message}`, isDev);
     res.status(500).json({ success: false, message: "Error fetching cart", error: error.message });
   }
 };
 
-exports.clearCart = async (req, res) => {
+exports.updateQuantity = async (req, res) => {
+  const { itemId, change } = req.body;
+  const isDev = process.env.NODE_ENV === 'development';
+
   try {
-    console.log('clearCart called for user:', req.user.id);
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      sendAlert('User not found', isDev);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const itemIndex = user.cartData.findIndex(item => item.id === itemId);
+    if (itemIndex > -1) {
+      user.cartData[itemIndex].quantity += change;
+      if (user.cartData[itemIndex].quantity <= 0) {
+        user.cartData.splice(itemIndex, 1);
+      }
+      await user.save();
+      sendAlert(`Cart updated: ${JSON.stringify(user.cartData)}`, isDev);
+      res.json({ success: true, cartData: user.cartData });
+    } else {
+      sendAlert(`Item not found in cart: ${itemId}`, isDev);
+      return res.status(404).json({ success: false, message: 'Item not found in cart' });
+    }
+  } catch (error) {
+    sendAlert(`Error in updateQuantity: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: 'Error updating cart', error: error.message });
+  }
+};
+
+exports.clearCart = async (req, res) => {
+  const isDev = process.env.NODE_ENV === 'development';
+  try {
     const userId = req.user.id;
     let user = await User.findById(userId);
     if (!user) {
-      console.log('User not found:', userId);
+      sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
+
     user.cartData = [];
     await user.save();
-    console.log('Cart cleared for user:', userId);
+    sendAlert(`Cart cleared for user: ${userId}`, isDev);
     res.json({ success: true, message: "Cart cleared successfully" });
   } catch (error) {
-    console.error('Error in clearCart:', error);
+    sendAlert(`Error in clearCart: ${error.message}`, isDev);
     res.status(500).json({ success: false, message: "Error clearing cart", error: error.message });
   }
 };

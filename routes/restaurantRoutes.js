@@ -37,13 +37,10 @@ router.put("/restaurants/:id", upload, restaurantController.updateRestaurant);
 router.delete("/restaurants/:id", restaurantController.deleteRestaurant);
 
 router.post("/restaurants/:restaurantId/menu", upload, restaurantController.createMenuItem);
-// router.get("/restaurants", restaurantController.getAllRestaurants);
-// router.get("/restaurants/:id", restaurantController.getRestaurant);
-// router.put("/restaurants/:id", upload, restaurantController.updateRestaurant);
-// router.delete("/restaurants/:id", restaurantController.deleteRestaurant);
-
 router.delete("/restaurants/:restaurantId/menu/:menuId", menuController.deleteMenuItem);
 
 
 
 module.exports = router;
+
+

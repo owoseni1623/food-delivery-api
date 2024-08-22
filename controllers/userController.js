@@ -4,30 +4,35 @@ const bcrypt = require('bcryptjs');
 const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
-const createToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+const sendAlert = (message) => {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('ALERT:', message);
+  }
 };
 
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
-  console.log('Verification URL:', verificationUrl);
-  console.log('Sending email to:', email);
-  
+
   const { firstName, lastName, password, email, phone, address } = req.body;
   try {
     if (!firstName || !lastName || !password || !email || !phone) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
+
     if (password.length < 8) {
       return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
     }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+      sendAlert(`Registration attempt with existing email: ${email}`);
+      return res.status(409).json({ success: false, message: "Email already exists" });
     }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     const verificationToken = uuidv4();
     const newUser = new User({
       firstName,
@@ -37,11 +42,14 @@ exports.registerUser = async (req, res) => {
       address,
       password: hashedPassword,
       verificationToken,
-      isVerified: false,
+      isVerified: true,  // Set to true to bypass email verification
     });
-    
+
     await newUser.save();
+
     const token = createToken(newUser._id);
+
+    // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -49,23 +57,46 @@ exports.registerUser = async (req, res) => {
       subject: 'Email Verification',
       text: `Please verify your email by clicking the link: ${verificationUrl}`
     };
-    await transporter.sendMail(mailOptions);
-    console.log('Verification email sent successfully');
+
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Verification email sent successfully');
+      sendAlert(`Verification email sent to: ${email}`);
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
+    }
+
     res.status(201).json({
       success: true,
-      message: "User registered successfully. Please check your email to verify your account.",
-      token
+      message: "User registered successfully. If you don't receive a verification email, please contact support.",
+      token,
+      user: {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email
+      }
     });
+
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    console.error('Error during registration:', error);
-    let errorMessage = "Server Error";
-    if (error.name === 'ValidationError') {
-      errorMessage = Object.values(error.errors).map(val => val.message).join(', ');
-    } else if (error.code === 11000) {
-      errorMessage = "Email already exists";
+    console.error('Detailed error during registration:', error);
+    sendAlert(`Error during registration: ${error.message}`);
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "Email already exists" });
     }
-    res.status(500).json({ success: false, message: errorMessage, error: error.message });
+
+    if (error.name === 'MongoNetworkError') {
+      sendAlert('Database connection error during user registration');
+      return res.status(500).json({ success: false, message: "Database connection error. Please try again later." });
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: "An error occurred during registration", 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -75,15 +106,13 @@ exports.loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      sendAlert(`Login attempt with non-existent email: ${email}`);
       return res.status(400).json({ success: false, message: "Invalid credentials" });
-    }
-
-    if (!user.isVerified) {
-      return res.status(400).json({ success: false, message: "Please verify your email before logging in" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      sendAlert(`Failed login attempt for email: ${email}`);
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
@@ -101,19 +130,27 @@ exports.loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error during login:', error);
+    sendAlert(`Error during login: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
+
 };
+const createToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
 
 exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
+      sendAlert(`Profile fetch attempt for non-existent user ID: ${req.user.id}`);
       return res.status(404).json({ success: false, message: "User not found" });
     }
     res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Error fetching user profile:', error);
+    sendAlert(`Error fetching user profile: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
@@ -133,11 +170,30 @@ exports.updateUserProfile = async (req, res) => {
 
     const user = await User.findByIdAndUpdate(req.user.id, updateFields, { new: true }).select('-password');
     if (!user) {
+      sendAlert(`Update attempt for non-existent user ID: ${req.user.id}`);
       return res.status(404).json({ success: false, message: "User not found" });
     }
     res.status(200).json({ success: true, message: "Profile updated successfully", user });
   } catch (error) {
     console.error('Error updating user profile:', error);
+    sendAlert(`Error updating user profile: ${error.message}`);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  const { token } = req.params;
+  try {
+    const user = await User.findOne({ verificationToken: token });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid verification token" });
+    }
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+    res.status(200).json({ success: true, message: "Email verified successfully" });
+  } catch (error) {
+    console.error('Error during email verification:', error);
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
