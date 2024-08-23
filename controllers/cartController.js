@@ -10,6 +10,7 @@ const sendAlert = (message, isDev) => {
   }
 };
 
+
 exports.addToCart = async (req, res) => {
   const { productId, quantity, name, price, image } = req.body;
   const isDev = process.env.NODE_ENV === 'development';
@@ -22,7 +23,13 @@ exports.addToCart = async (req, res) => {
     }
 
     const existingItemIndex = user.cartData.findIndex(item => item.id === productId);
-    const imageUrl = image ? `${req.protocol}://${req.get('host')}/uploads/${image}` : 'https://via.placeholder.com/300x300';
+    let imageUrl = image;
+
+    // If the image is not a full URL, construct it
+    if (image && !image.startsWith('http')) {
+      const apiUrl = `${req.protocol}://${req.get('host')}`;
+      imageUrl = `${apiUrl}/uploads/${image.split('/').pop()}`;
+    }
 
     if (existingItemIndex > -1) {
       user.cartData[existingItemIndex].quantity += quantity;
