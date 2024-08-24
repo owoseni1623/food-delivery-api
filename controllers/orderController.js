@@ -27,7 +27,7 @@ exports.createOrder = async (req, res) => {
 
     const order = new Order({
       userId,
-      orderId: Date.now().toString(), // Generate a unique orderId
+      orderId: Date.now().toString(),
       items,
       totalAmount,
       address,

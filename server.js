@@ -19,7 +19,7 @@ connectDB();
 
 // CORS configuration
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://food-delivery-mauve-mu.vercel.app/",
   methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true

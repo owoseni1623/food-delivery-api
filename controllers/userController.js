@@ -42,7 +42,7 @@ exports.registerUser = async (req, res) => {
       address,
       password: hashedPassword,
       verificationToken,
-      isVerified: true,  // Set to true to bypass email verification
+      isVerified: true,
     });
 
     await newUser.save();
