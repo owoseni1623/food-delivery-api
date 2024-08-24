@@ -21,7 +21,8 @@ connectDB();
 app.use(cors({
   origin: 'https://food-delivery-mauve-mu.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true 
 }));
 
 // Static folder for uploads
