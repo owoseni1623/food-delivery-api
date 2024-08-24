@@ -130,11 +130,15 @@ exports.loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error during login:', error);
-    sendAlert(`Error during login: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+    res.status(error.response?.status || 500).json({ 
+      success: false, 
+      message: error.message || "An unexpected error occurred",
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
   }
-
 };
+
+
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
