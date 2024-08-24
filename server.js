@@ -10,6 +10,8 @@ const restaurantRoutes = require("./routes/restaurantRoutes");
 const emailRoutes = require("./routes/emailRoutes");
 const profileRoutes = require("./routes/profileRoutes")
 const path = require("path");
+
+
 require('dotenv').config();
 
 const app = express();

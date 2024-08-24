@@ -6,7 +6,6 @@ const sendAlert = (message, isDev) => {
     console.log('DEV ALERT:', message);
   } else {
     console.log('PROD ALERT:', message);
-    // Sentry.captureMessage(`PROD ALERT: ${message}`);
   }
 };
 
