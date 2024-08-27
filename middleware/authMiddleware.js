@@ -11,6 +11,15 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if token is close to expiring (e.g., less than 5 minutes left)
+    const now = Math.floor(Date.now() / 1000);
+    if (decoded.exp - now < 300) {
+      const user = await User.findById(decoded.id).select('-password');
+      const newToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      res.setHeader('X-New-Token', newToken);
+    }
+
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {

@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getUserProfile, updateUserProfile, verifyEmail } = require('../controllers/userController');
+const { registerUser, loginUser, getUserProfile, updateUserProfile, verifyEmail, refreshToken } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
@@ -22,6 +22,7 @@ const upload = multer({ storage: storage });
 // User routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/refresh-token', refreshToken);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
 
@@ -33,7 +34,7 @@ router.get('/test-email', async (req, res) => {
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER, // Send to yourself for testing
+      to: process.env.EMAIL_USER,
       subject: "Test Email",
       text: "This is a test email from your application."
     });

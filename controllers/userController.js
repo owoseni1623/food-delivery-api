@@ -11,6 +11,15 @@ const sendAlert = (message) => {
   }
 };
 
+const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    res.json({ success: true, token: newAccessToken });
+  } catch (error) {
+    res.status(401).json({ success: false, message: "Invalid refresh token" });
+  }
+};
+
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
@@ -100,88 +109,44 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// exports.loginUser = async (req, res) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     const user = await User.findOne({ email });
-//     if (!user) {
-//       sendAlert(`Login attempt with non-existent email: ${email}`);
-//       return res.status(400).json({ success: false, message: "Invalid credentials" });
-//     }
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       sendAlert(`Failed login attempt for email: ${email}`);
-//       return res.status(400).json({ success: false, message: "Invalid credentials" });
-//     }
-
-//     const token = createToken(user._id);
-//     res.status(200).json({
-//       success: true,
-//       message: "Login successful",
-//       token,
-//       user: {
-//         id: user._id,
-//         firstName: user.firstName,
-//         lastName: user.lastName,
-//         email: user.email
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error during login:', error);
-//     res.status(error.response?.status || 500).json({ 
-//       success: false, 
-//       message: error.message || "An unexpected error occurred",
-//       error: process.env.NODE_ENV === 'development' ? error : undefined
-//     });
-//   }
-// };
-
-
-
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
     if (!user) {
       sendAlert(`Login attempt with non-existent email: ${email}`);
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       sendAlert(`Failed login attempt for email: ${email}`);
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
-    const token = createToken(user._id);
-    
-    // Set token in HTTP-only cookie
-    res.cookie('token', token, { 
-      httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-      sameSite: 'strict', // Protect against CSRF
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
 
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email
-      }
-    });
+    const token = createToken(user._id);
+  res.status(200).json({
+    success: true,
+    message: "Login successful",
+    token,
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email
+    }
+  });
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(error.response?.status || 500).json({
-      success: false,
+    res.status(error.response?.status || 500).json({ 
+      success: false, 
       message: error.message || "An unexpected error occurred",
       error: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }
 };
+
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -245,3 +210,5 @@ exports.verifyEmail = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
+
+exports.refreshToken = refreshToken;
