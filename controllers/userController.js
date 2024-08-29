@@ -491,21 +491,15 @@ exports.mergeCart = async (req, res) => {
     }
 
     // Merge local cart with user's cart
-    localCart.forEach(localItem => {
-      const existingItem = user.cart.find(item => item.productId.toString() === localItem.id.toString());
-      if (existingItem) {
-        existingItem.quantity += localItem.quantity;
-      } else {
-        user.cart.push({
-          productId: localItem.id,
-          name: localItem.name,
-          price: localItem.price,
-          quantity: localItem.quantity,
-          image: localItem.image
-        });
-      }
-    });
+    const updatedCart = localCart.map(localItem => ({
+      productId: localItem.id,
+      name: localItem.name,
+      price: localItem.price,
+      quantity: localItem.quantity,
+      image: localItem.image
+    }));
 
+    user.cart = updatedCart;
     await user.save();
 
     res.status(200).json({ 
@@ -521,4 +515,13 @@ exports.mergeCart = async (req, res) => {
       error: error.message 
     });
   }
+};
+
+module.exports = {
+  registerUser: exports.registerUser,
+  loginUser: exports.loginUser,
+  getUserProfile: exports.getUserProfile,
+  updateUserProfile: exports.updateUserProfile,
+  verifyEmail: exports.verifyEmail,
+  mergeCart: exports.mergeCart
 };

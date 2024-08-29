@@ -33,7 +33,7 @@ router.post('/login', loginUser);
 router.post('/refresh-token', refreshToken);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
-router.post('/cart/merge', authMiddleware, mergeCart);
+router.post('/api/users/merge-cart', authMiddleware, mergeCart);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);
