@@ -24,7 +24,7 @@ const refreshToken = async (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
-  const { email, password } = req.body;
+  const { email, password, firstName, lastName, phone, address } = req.body;
   try {
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
@@ -47,6 +47,10 @@ exports.registerUser = async (req, res) => {
     const newUser = new User({
       email,
       password: hashedPassword,
+      firstName,
+      lastName,
+      phone,
+      address,
       verificationToken,
       isVerified: false,
     });
@@ -79,7 +83,9 @@ exports.registerUser = async (req, res) => {
       token,
       user: {
         id: newUser._id,
-        email: newUser.email
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName
       }
     });
 
