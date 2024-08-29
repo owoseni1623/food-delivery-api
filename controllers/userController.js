@@ -229,13 +229,13 @@ const mergeCart = async (req, res) => {
       image: localItem.image
     }));
 
-    user.cart = updatedCart;
+    user.cartData = updatedCart;
     await user.save();
 
     res.status(200).json({ 
       success: true, 
       message: "Cart merged successfully", 
-      cartData: user.cart 
+      cartData: user.cartData 
     });
   } catch (error) {
     console.error('Error merging cart:', error);
