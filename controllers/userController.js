@@ -13,8 +13,8 @@ const sendAlert = (message) => {
 const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    // Implement your refresh token logic here
-    const newAccessToken = ""; // Generate new access token
+    // Implement refresh token logic here
+    const newAccessToken = "new_access_token"; // Replace with actual token generation
     res.json({ success: true, token: newAccessToken });
   } catch (error) {
     res.status(401).json({ success: false, message: "Invalid refresh token" });
@@ -24,7 +24,7 @@ const refreshToken = async (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
-  const { email, password } = req.body;
+  const { firstName, lastName, email, password, phone, address } = req.body;
   try {
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
@@ -45,10 +45,14 @@ exports.registerUser = async (req, res) => {
 
     const verificationToken = uuidv4();
     const newUser = new User({
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
+      phone,
+      address,
       verificationToken,
-      isVerified: false,
+      isVerified: true, // Set to false if you want email verification
     });
 
     await newUser.save();
@@ -79,6 +83,8 @@ exports.registerUser = async (req, res) => {
       token,
       user: {
         id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email
       }
     });
@@ -127,9 +133,9 @@ exports.loginUser = async (req, res) => {
       token,
       user: {
         id: user._id,
-        email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        email: user.email
       }
     });
   } catch (error) {
