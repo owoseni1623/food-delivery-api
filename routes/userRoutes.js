@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getUserProfile, updateUserProfile, verifyEmail, refreshToken } = require('../controllers/userController');
+const { registerUser, loginUser, getUserProfile, updateUserProfile, verifyEmail, refreshToken, mergeCart } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { authenticateToken } = require('../middleware/Auth');
 const multer = require('multer');
@@ -26,7 +26,7 @@ router.post('/login', loginUser);
 router.post('/refresh-token', refreshToken);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
-router.post('/cart/merge', authenticateToken, userController.mergeCart);
+router.post('/cart/merge', authenticateToken, mergeCart);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);
