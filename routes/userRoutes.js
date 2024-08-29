@@ -1,11 +1,17 @@
 const express = require('express');
-const { registerUser, loginUser, getUserProfile, updateUserProfile, verifyEmail, refreshToken, mergeCart } = require('../controllers/userController');
+const { 
+  registerUser, 
+  loginUser, 
+  getUserProfile, 
+  updateUserProfile, 
+  verifyEmail, 
+  refreshToken, 
+  mergeCart 
+} = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
-const { authenticateToken } = require('../middleware/Auth');
 const multer = require('multer');
 const path = require('path');
 const transporter = require('../config/nodemailer');
-
 
 const router = express.Router();
 
@@ -18,6 +24,7 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname))
   }
 });
+
 const upload = multer({ storage: storage });
 
 // User routes
@@ -26,7 +33,7 @@ router.post('/login', loginUser);
 router.post('/refresh-token', refreshToken);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
-router.post('/cart/merge', authenticateToken, mergeCart);
+router.post('/cart/merge', authMiddleware, mergeCart);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);
