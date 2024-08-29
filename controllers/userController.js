@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
-
 const sendAlert = (message) => {
   if (process.env.NODE_ENV === 'production') {
     console.log('ALERT:', message);
@@ -14,6 +13,8 @@ const sendAlert = (message) => {
 const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
+    // Implement your refresh token logic here
+    const newAccessToken = ""; // Generate new access token
     res.json({ success: true, token: newAccessToken });
   } catch (error) {
     res.status(401).json({ success: false, message: "Invalid refresh token" });
@@ -23,10 +24,10 @@ const refreshToken = async (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
-  const { firstName, lastName, password, email, phone, address } = req.body;
+  const { email, password } = req.body;
   try {
-    if (!firstName || !lastName || !password || !email || !phone) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
     if (password.length < 8) {
@@ -44,14 +45,10 @@ exports.registerUser = async (req, res) => {
 
     const verificationToken = uuidv4();
     const newUser = new User({
-      firstName,
-      lastName,
       email,
-      phone,
-      address,
       password: hashedPassword,
       verificationToken,
-      isVerified: true,
+      isVerified: false,
     });
 
     await newUser.save();
@@ -82,8 +79,6 @@ exports.registerUser = async (req, res) => {
       token,
       user: {
         id: newUser._id,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
         email: newUser.email
       }
     });
@@ -126,17 +121,17 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id);
-  res.status(200).json({
-    success: true,
-    message: "Login successful",
-    token,
-    user: {
-      id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email
-    }
-  });
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+      }
+    });
   } catch (error) {
     console.error('Error during login:', error);
     res.status(error.response?.status || 500).json({ 
@@ -147,11 +142,9 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
-
 
 exports.getUserProfile = async (req, res) => {
   try {
