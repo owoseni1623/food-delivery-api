@@ -237,7 +237,6 @@ const mergeCart = async (req, res) => {
       user.cartData = [];
     }
 
-    // Merge local cart with user's cart
     localCart.forEach(localItem => {
       const existingItemIndex = user.cartData.findIndex(item => item.productId.toString() === localItem.id.toString());
       if (existingItemIndex > -1) {
