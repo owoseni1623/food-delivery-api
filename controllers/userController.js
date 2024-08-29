@@ -5,9 +5,7 @@ const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
 const sendAlert = (message) => {
-  if (process.env.NODE_ENV === 'production') {
-    console.log('ALERT:', message);
-  }
+  console.log('ALERT:', message);
 };
 
 const createToken = (id) => {
@@ -202,11 +200,21 @@ const verifyEmail = async (req, res) => {
 const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    // Implement your refresh token logic here
-    const newAccessToken = ""; // Generate new access token
-    res.json({ success: true, token: newAccessToken });
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: "Refresh token is required" });
+    }
+
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).json({ success: false, message: "Invalid refresh token" });
+      }
+
+      const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+      res.json({ success: true, token: accessToken });
+    });
   } catch (error) {
-    res.status(401).json({ success: false, message: "Invalid refresh token" });
+    console.error('Error refreshing token:', error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
 
@@ -215,22 +223,41 @@ const mergeCart = async (req, res) => {
     const { localCart } = req.body;
     const userId = req.user.id;
 
+    console.log('Merging cart for user:', userId);
+    console.log('Local cart:', localCart);
+
     const user = await User.findById(userId);
     if (!user) {
+      console.log('User not found:', userId);
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Merge local cart with user's cart
-    const updatedCart = localCart.map(localItem => ({
-      productId: localItem.id,
-      name: localItem.name,
-      price: localItem.price,
-      quantity: localItem.quantity,
-      image: localItem.image
-    }));
+    // Initialize cartData if it doesn't exist
+    if (!user.cartData) {
+      user.cartData = [];
+    }
 
-    user.cartData = updatedCart;
+    // Merge local cart with user's cart
+    localCart.forEach(localItem => {
+      const existingItemIndex = user.cartData.findIndex(item => item.productId.toString() === localItem.id.toString());
+      if (existingItemIndex > -1) {
+        // Update existing item
+        user.cartData[existingItemIndex].quantity += localItem.quantity;
+      } else {
+        // Add new item
+        user.cartData.push({
+          productId: localItem.id,
+          name: localItem.name,
+          price: localItem.price,
+          quantity: localItem.quantity,
+          image: localItem.image
+        });
+      }
+    });
+
     await user.save();
+
+    console.log('Cart merged successfully. Updated cart:', user.cartData);
 
     res.status(200).json({ 
       success: true, 

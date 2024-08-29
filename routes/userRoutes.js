@@ -1,18 +1,17 @@
 const express = require('express');
-const { 
-  registerUser, 
-  loginUser, 
-  getUserProfile, 
-  updateUserProfile, 
-  verifyEmail, 
-  refreshToken, 
-  mergeCart 
+const {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  verifyEmail,
+  refreshToken,
+  mergeCart
 } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const transporter = require('../config/nodemailer');
-
 const router = express.Router();
 
 // Configure multer for file uploads
