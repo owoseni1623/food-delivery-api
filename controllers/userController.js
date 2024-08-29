@@ -21,6 +21,49 @@ const refreshToken = async (req, res) => {
   }
 };
 
+exports.mergeCart = async (req, res) => {
+  try {
+    const { localCart } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Merge local cart with user's cart
+    localCart.forEach(localItem => {
+      const existingItem = user.cart.find(item => item.productId.toString() === localItem.id.toString());
+      if (existingItem) {
+        existingItem.quantity += localItem.quantity;
+      } else {
+        user.cart.push({
+          productId: localItem.id,
+          name: localItem.name,
+          price: localItem.price,
+          quantity: localItem.quantity,
+          image: localItem.image
+        });
+      }
+    });
+
+    await user.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Cart merged successfully", 
+      cartData: user.cart 
+    });
+  } catch (error) {
+    console.error('Error merging cart:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "An error occurred while merging the cart", 
+      error: error.message 
+    });
+  }
+};
+
 exports.registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
