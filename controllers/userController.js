@@ -237,37 +237,19 @@ const mergeCart = async (req, res) => {
       user.cartData = [];
     }
 
-    if (!Array.isArray(localCart)) {
-      return res.status(400).json({ success: false, message: "Invalid localCart data" });
-    }
-
     localCart.forEach(localItem => {
-      if (!localItem || typeof localItem !== 'object') {
-        console.log('Invalid item in localCart:', localItem);
-        return; // Skip this item
-      }
-
-      const localItemId = localItem.id ? localItem.id.toString() : null;
-      if (!localItemId) {
-        console.log('Item in localCart is missing id:', localItem);
-        return; // Skip this item
-      }
-
-      const existingItemIndex = user.cartData.findIndex(item => 
-        item.productId && item.productId.toString() === localItemId
-      );
-
+      const existingItemIndex = user.cartData.findIndex(item => item.productId.toString() === localItem.id.toString());
       if (existingItemIndex > -1) {
         // Update existing item
-        user.cartData[existingItemIndex].quantity += localItem.quantity || 0;
+        user.cartData[existingItemIndex].quantity += localItem.quantity;
       } else {
         // Add new item
         user.cartData.push({
-          productId: localItemId,
-          name: localItem.name || 'Unknown Product',
-          price: localItem.price || 0,
-          quantity: localItem.quantity || 1,
-          image: localItem.image || ''
+          productId: localItem.id,
+          name: localItem.name,
+          price: localItem.price,
+          quantity: localItem.quantity,
+          image: localItem.image
         });
       }
     });
