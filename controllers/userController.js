@@ -14,7 +14,6 @@ const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-
 const registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
@@ -211,7 +210,7 @@ const refreshToken = async (req, res) => {
   }
 };
 
-const syncCart = async (req, res) => {
+const mergeCart = async (req, res) => {
   try {
     const { localCart } = req.body;
     const userId = req.user.id;
