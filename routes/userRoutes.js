@@ -6,6 +6,7 @@ const {
   updateUserProfile,
   verifyEmail,
   refreshToken,
+  syncCart,
   mergeCart
 } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -33,6 +34,7 @@ router.post('/refresh-token', refreshToken);
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, upload.single('avatar'), updateUserProfile);
 router.post('/merge-cart', authMiddleware, mergeCart);
+router.post('/sync-cart', protect, syncCart);
 
 // Email verification route
 router.get('/verify-email/:token', verifyEmail);

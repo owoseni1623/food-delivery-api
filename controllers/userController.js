@@ -14,6 +14,7 @@ const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
+
 const registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
@@ -210,7 +211,7 @@ const refreshToken = async (req, res) => {
   }
 };
 
-const mergeCart = async (req, res) => {
+const syncCart = async (req, res) => {
   try {
     const { localCart } = req.body;
     const userId = req.user.id;
@@ -221,27 +222,35 @@ const mergeCart = async (req, res) => {
     }
 
     // Merge local cart with user's cart
-    const updatedCart = localCart.map(localItem => ({
-      productId: localItem.id,
-      name: localItem.name,
-      price: localItem.price,
-      quantity: localItem.quantity,
-      image: localItem.image
-    }));
+    const mergedCart = [...user.cartData];
+    localCart.forEach(localItem => {
+      const existingItem = mergedCart.find(item => item.productId === localItem.id);
+      if (existingItem) {
+        existingItem.quantity += localItem.quantity;
+      } else {
+        mergedCart.push({
+          productId: localItem.id,
+          name: localItem.name,
+          price: localItem.price,
+          quantity: localItem.quantity,
+          image: localItem.image
+        });
+      }
+    });
 
-    user.cartData = updatedCart;
+    user.cartData = mergedCart;
     await user.save();
 
     res.status(200).json({ 
       success: true, 
-      message: "Cart merged successfully", 
+      message: "Cart synced successfully", 
       cartData: user.cartData 
     });
   } catch (error) {
-    console.error('Error merging cart:', error);
+    console.error('Error syncing cart:', error);
     res.status(500).json({ 
       success: false, 
-      message: "An error occurred while merging the cart", 
+      message: "An error occurred while syncing the cart", 
       error: error.message 
     });
   }
