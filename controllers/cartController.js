@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Product = require('../models/Product');
 
 // Utility function for alerts
 const sendAlert = (message, isDev) => {
@@ -9,9 +10,24 @@ const sendAlert = (message, isDev) => {
   }
 };
 
+exports.getCart = async (req, res) => {
+  const isDev = process.env.NODE_ENV === 'development';
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      sendAlert('User not found', isDev);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    sendAlert(`Cart data retrieved: ${JSON.stringify(user.cartData)}`, isDev);
+    res.json({ success: true, cartData: user.cartData });
+  } catch (error) {
+    sendAlert(`Error in getCart: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: "Error fetching cart", error: error.message });
+  }
+};
 
 exports.addToCart = async (req, res) => {
-  const { productId, quantity, name, price, image } = req.body;
+  const { id, name, price, image, quantity } = req.body;
   const isDev = process.env.NODE_ENV === 'development';
 
   try {
@@ -21,7 +37,7 @@ exports.addToCart = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const existingItemIndex = user.cartData.findIndex(item => item.id === productId);
+    const existingItemIndex = user.cartData.findIndex(item => item.id === id);
     let imageUrl = image;
 
     // If the image is not a full URL, construct it
@@ -33,7 +49,7 @@ exports.addToCart = async (req, res) => {
     if (existingItemIndex > -1) {
       user.cartData[existingItemIndex].quantity += quantity;
     } else {
-      user.cartData.push({ id: productId, name, price, quantity, image: imageUrl });
+      user.cartData.push({ id, name, price, quantity, image: imageUrl });
     }
 
     await user.save();
@@ -69,24 +85,6 @@ exports.removeFromCart = async (req, res) => {
   } catch (error) {
     sendAlert(`Error in removeFromCart: ${error.message}`, isDev);
     res.status(500).json({ success: false, message: "Error removing from cart", error: error.message });
-  }
-};
-
-exports.getCart = async (req, res) => {
-  const isDev = process.env.NODE_ENV === 'development';
-  try {
-    const userId = req.user.id;
-    let user = await User.findById(userId);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    sendAlert(`Cart data retrieved: ${JSON.stringify(user.cartData)}`, isDev);
-    res.json({ success: true, cartData: user.cartData });
-  } catch (error) {
-    sendAlert(`Error in getCart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Error fetching cart", error: error.message });
   }
 };
 
@@ -137,5 +135,34 @@ exports.clearCart = async (req, res) => {
   } catch (error) {
     sendAlert(`Error in clearCart: ${error.message}`, isDev);
     res.status(500).json({ success: false, message: "Error clearing cart", error: error.message });
+  }
+};
+
+exports.mergeCart = async (req, res) => {
+  const { localCart } = req.body;
+  const isDev = process.env.NODE_ENV === 'development';
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      sendAlert('User not found', isDev);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    for (const localItem of localCart) {
+      const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
+      if (existingItemIndex > -1) {
+        user.cartData[existingItemIndex].quantity += localItem.quantity;
+      } else {
+        user.cartData.push(localItem);
+      }
+    }
+
+    await user.save();
+    sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
+    res.json({ success: true, cartData: user.cartData });
+  } catch (error) {
+    sendAlert(`Error in mergeCart: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
   }
 };
