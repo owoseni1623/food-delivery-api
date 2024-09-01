@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const Product = require('../models/Product');
 
 // Utility function for alerts
 const sendAlert = (message, isDev) => {
