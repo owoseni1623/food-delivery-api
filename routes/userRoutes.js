@@ -12,6 +12,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const transporter = require('../config/nodemailer');
+
 const router = express.Router();
 
 // Configure multer for file uploads
