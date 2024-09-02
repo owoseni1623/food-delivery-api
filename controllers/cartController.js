@@ -148,6 +148,9 @@ exports.mergeCart = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    // Clear the existing cart before merging
+    user.cartData = [];
+
     for (const localItem of localCart) {
       const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
       if (existingItemIndex > -1) {
