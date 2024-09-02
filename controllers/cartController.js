@@ -1,6 +1,5 @@
 const User = require('../models/User');
 
-// Utility function for alerts
 const sendAlert = (message, isDev) => {
   if (isDev) {
     console.log('DEV ALERT:', message);
@@ -39,7 +38,6 @@ exports.addToCart = async (req, res) => {
     const existingItemIndex = user.cartData.findIndex(item => item.id === id);
     let imageUrl = image;
 
-    // If the image is not a full URL, construct it
     if (image && !image.startsWith('http')) {
       const apiUrl = `${req.protocol}://${req.get('host')}`;
       imageUrl = `${apiUrl}/uploads/${image.split('/').pop()}`;
