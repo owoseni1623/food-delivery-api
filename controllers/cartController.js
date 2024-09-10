@@ -100,6 +100,7 @@ exports.updateQuantity = async (req, res) => {
     if (itemIndex > -1) {
       user.cartData[itemIndex].quantity += change;
       if (user.cartData[itemIndex].quantity <= 0) {
+        // Remove the item if quantity becomes zero or negative
         user.cartData.splice(itemIndex, 1);
       }
       await user.save();
