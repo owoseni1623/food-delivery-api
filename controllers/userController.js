@@ -210,7 +210,7 @@ const refreshToken = async (req, res) => {
   }
 };
 
-exports.mergeCart = async (req, res) => {
+const mergeCart = async (req, res) => {
   const { localCart } = req.body;
   const isDev = process.env.NODE_ENV === 'development';
 
