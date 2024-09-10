@@ -210,57 +210,56 @@ const refreshToken = async (req, res) => {
   }
 };
 
-const mergeCart = async (req, res) => {
-  try {
-    const { localCart } = req.body;
-    const userId = req.user.id;
+exports.mergeCart = async (req, res) => {
+  const { localCart } = req.body;
+  const isDev = process.env.NODE_ENV === 'development';
 
-    const user = await User.findById(userId);
+  try {
+    const user = await User.findById(req.user.id);
     if (!user) {
+      sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Merge local cart with user's cart
-    const mergedCart = [...user.cartData];
-    localCart.forEach(localItem => {
-      const existingItem = mergedCart.find(item => item.productId === localItem.id);
-      if (existingItem) {
-        existingItem.quantity += localItem.quantity;
+    // Initialize cartData if it doesn't exist
+    if (!user.cartData) {
+      user.cartData = [];
+    }
+
+    for (const localItem of localCart) {
+      if (localItem && localItem.id) {
+        const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
+        if (existingItemIndex > -1) {
+          user.cartData[existingItemIndex].quantity += localItem.quantity;
+        } else {
+          user.cartData.push({
+            id: localItem.id,
+            name: localItem.name,
+            price: localItem.price,
+            image: localItem.image,
+            quantity: localItem.quantity
+          });
+        }
       } else {
-        mergedCart.push({
-          productId: localItem.id,
-          name: localItem.name,
-          price: localItem.price,
-          quantity: localItem.quantity,
-          image: localItem.image
-        });
+        sendAlert(`Invalid item in localCart: ${JSON.stringify(localItem)}`, isDev);
       }
-    });
+    }
 
-    user.cartData = mergedCart;
     await user.save();
-
-    res.status(200).json({ 
-      success: true, 
-      message: "Cart synced successfully", 
-      cartData: user.cartData 
-    });
+    sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
+    res.json({ success: true, cartData: user.cartData });
   } catch (error) {
-    console.error('Error syncing cart:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: "An error occurred while syncing the cart", 
-      error: error.message 
-    });
+    sendAlert(`Error in mergeCart: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
   }
 };
 
 module.exports = {
-  registerUser,
-  loginUser,
-  getUserProfile,
-  updateUserProfile,
-  verifyEmail,
-  refreshToken,
-  mergeCart
+  registerUser: exports.registerUser,
+  loginUser: exports.loginUser,
+  getUserProfile: exports.getUserProfile,
+  updateUserProfile: exports.updateUserProfile,
+  verifyEmail: exports.verifyEmail,
+  refreshToken: exports.refreshToken,
+  mergeCart: exports.mergeCart
 };
