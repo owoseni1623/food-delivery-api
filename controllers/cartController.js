@@ -140,23 +140,33 @@ exports.mergeCart = async (req, res) => {
   const isDev = process.env.NODE_ENV === 'development';
 
   try {
+    // Check if req.user exists and has an id property
+    if (!req.user || !req.user.id) {
+      sendAlert('User not authenticated', isDev);
+      return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       sendAlert('User not found', isDev);
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Clear the existing cart before merging
-    user.cartData = [];
+    // Ensure localCart is an array
+    if (!Array.isArray(localCart)) {
+      sendAlert('Invalid local cart data', isDev);
+      return res.status(400).json({ success: false, message: "Invalid local cart data" });
+    }
 
-    for (const localItem of localCart) {
+    // Merge the local cart with the user's cart
+    localCart.forEach(localItem => {
       const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
       if (existingItemIndex > -1) {
         user.cartData[existingItemIndex].quantity += localItem.quantity;
       } else {
         user.cartData.push(localItem);
       }
-    }
+    });
 
     await user.save();
     sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
