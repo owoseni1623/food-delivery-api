@@ -255,11 +255,11 @@ exports.mergeCart = async (req, res) => {
 };
 
 module.exports = {
-  registerUser: exports.registerUser,
-  loginUser: exports.loginUser,
-  getUserProfile: exports.getUserProfile,
-  updateUserProfile: exports.updateUserProfile,
-  verifyEmail: exports.verifyEmail,
-  refreshToken: exports.refreshToken,
-  mergeCart: exports.mergeCart
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  verifyEmail,
+  refreshToken,
+  mergeCart
 };
