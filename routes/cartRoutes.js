@@ -9,6 +9,6 @@ router.post('/remove', authMiddleware, cartController.removeFromCart);
 router.get('/get', authMiddleware, cartController.getCart);
 router.post('/update', authMiddleware, cartController.updateQuantity);
 router.post('/clear', authMiddleware, cartController.clearCart);
-router.post('/merge', authMiddleware, cartController.mergeCart);
+router.post('/merge', cartController.mergeCart);
 
 module.exports = router;
