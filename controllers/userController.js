@@ -220,29 +220,24 @@ const mergeCart = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Ensure user.cartData is initialized as an array
-    if (!Array.isArray(user.cartData)) {
-      user.cartData = [];
-    }
-
     // Merge local cart with user's cart
+    const mergedCart = [...user.cartData];
     localCart.forEach(localItem => {
-      if (localItem && localItem.id) {
-        const existingItem = user.cartData.find(item => item.productId === localItem.id);
-        if (existingItem) {
-          existingItem.quantity += localItem.quantity;
-        } else {
-          user.cartData.push({
-            productId: localItem.id,
-            name: localItem.name,
-            price: localItem.price,
-            quantity: localItem.quantity,
-            image: localItem.image
-          });
-        }
+      const existingItem = mergedCart.find(item => item.productId === localItem.id);
+      if (existingItem) {
+        existingItem.quantity += localItem.quantity;
+      } else {
+        mergedCart.push({
+          productId: localItem.id,
+          name: localItem.name,
+          price: localItem.price,
+          quantity: localItem.quantity,
+          image: localItem.image
+        });
       }
     });
 
+    user.cartData = mergedCart;
     await user.save();
 
     res.status(200).json({ 
