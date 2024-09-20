@@ -5,39 +5,55 @@ const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
 const sendAlert = (message) => {
-  if (process.env.NODE_ENV === 'production') {
-    console.log('ALERT:', message);
-  }
+  console.log('ALERT:', message);
 };
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-const sendVerificationEmail = async (email, verificationToken) => {
-  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+const sendEmail = async (to, subject, htmlContent) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Welcome! Please Verify Your Email',
-    html: `
-      <h1>Welcome to Our App!</h1>
-      <p>Thank you for registering. Your account has been created successfully.</p>
-      <p>To verify your email address, please click on the link below:</p>
-      <a href="${verificationUrl}">Verify Your Email</a>
-      <p>This link will expire in 24 hours.</p>
-      <p>If you didn't create an account, please ignore this email.</p>
-    `
+    to,
+    subject,
+    html: htmlContent
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Verification email sent successfully');
-    sendAlert(`Verification email sent to: ${email}`);
+    console.log(`Email sent successfully to: ${to}`);
+    sendAlert(`Email sent to: ${to}`);
   } catch (emailError) {
-    console.error('Error sending verification email:', emailError);
-    sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
+    console.error('Error sending email:', emailError);
+    sendAlert(`Error sending email to: ${to}. Error: ${emailError.message}`);
+    throw emailError; // Rethrow the error to be caught in the calling function
   }
+};
+
+const sendVerificationEmail = async (email, verificationToken) => {
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+  const htmlContent = `
+    <h1>Welcome to Our App!</h1>
+    <p>Thank you for registering. Your account has been created successfully.</p>
+    <p>To verify your email address, please click on the link below:</p>
+    <a href="${verificationUrl}">Verify Your Email</a>
+    <p>This link will expire in 24 hours.</p>
+    <p>If you didn't create an account, please ignore this email.</p>
+  `;
+  
+  await sendEmail(email, 'Welcome! Please Verify Your Email', htmlContent);
+};
+
+const sendLoginNotificationEmail = async (email) => {
+  const htmlContent = `
+    <h1>New Login to Your Account</h1>
+    <p>We detected a new login to your account.</p>
+    <p>If this was you, no action is needed.</p>
+    <p>If you didn't log in, please secure your account immediately.</p>
+  `;
+  
+  await sendEmail(email, 'New Login Detected', htmlContent);
 };
 
 const registerUser = async (req, res) => {
@@ -80,7 +96,14 @@ const registerUser = async (req, res) => {
     const token = createToken(newUser._id);
 
     // Send verification email
-    await sendVerificationEmail(email, verificationToken);
+    try {
+      await sendVerificationEmail(email, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Consider whether to delete the user if email fails
+      // await User.findByIdAndDelete(newUser._id);
+      // return res.status(500).json({ success: false, message: "Failed to send verification email. Please try again." });
+    }
 
     res.status(201).json({
       success: true,
@@ -133,6 +156,15 @@ const loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id);
+
+    // Send login notification email
+    try {
+      await sendLoginNotificationEmail(email);
+    } catch (emailError) {
+      console.error('Failed to send login notification email:', emailError);
+      // Decide whether to proceed with login if email fails
+    }
+
     res.status(200).json({
       success: true,
       message: "Login successful",
