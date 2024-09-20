@@ -85,7 +85,12 @@ const registerUser = async (req, res) => {
       firstName,
       lastName,
       phone,
-      address,
+      address: {
+        street: address?.street,
+        city: address?.city,
+        state: address?.state,
+        country: address?.country
+      },
       verificationToken,
       verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
       isVerified: false,
@@ -114,6 +119,8 @@ const registerUser = async (req, res) => {
         email: newUser.email,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
+        phone: newUser.phone,
+        address: newUser.address,
         isVerified: newUser.isVerified
       }
     });
