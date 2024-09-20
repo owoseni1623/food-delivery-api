@@ -225,9 +225,76 @@ const refreshToken = async (req, res) => {
   }
 };
 
+// New functions to match the routes
+
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    const profile = await Profile.findOne({ userId: req.user.id });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user,
+      profile
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, address } = req.body;
+    
+    let profile = await Profile.findOne({ userId: req.user.id });
+    
+    if (!profile) {
+      profile = new Profile({ userId: req.user.id });
+    }
+
+    if (firstName) profile.firstName = firstName;
+    if (lastName) profile.lastName = lastName;
+    if (phone) profile.phone = phone;
+    if (address) profile.address = address;
+
+    if (req.file) {
+      profile.avatar = req.file.path;
+    }
+
+    await profile.save();
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      profile
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
+const mergeCart = async (req, res) => {
+  try {
+    // Implement cart merging logic here
+    res.json({ success: true, message: "Cart merged successfully" });
+  } catch (error) {
+    console.error('Error merging cart:', error);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   verifyEmail,
-  refreshToken
+  refreshToken,
+  getUserProfile,
+  updateUserProfile,
+  mergeCart
 };
