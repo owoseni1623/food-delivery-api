@@ -1,5 +1,4 @@
 const User = require("../models/User");
-const Profile = require("../models/Profile");
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/nodemailer');
@@ -28,7 +27,7 @@ const sendEmail = async (to, subject, htmlContent) => {
   } catch (emailError) {
     console.error('Error sending email:', emailError);
     sendAlert(`Error sending email to: ${to}. Error: ${emailError.message}`);
-    throw emailError;
+    throw emailError; // Rethrow the error to be caught in the calling function
   }
 };
 
@@ -83,6 +82,15 @@ const registerUser = async (req, res) => {
     const newUser = new User({
       email,
       password: hashedPassword,
+      firstName,
+      lastName,
+      phone,
+      address: {
+        street: address?.street,
+        city: address?.city,
+        state: address?.state,
+        country: address?.country
+      },
       verificationToken,
       verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
       isVerified: false,
@@ -90,24 +98,16 @@ const registerUser = async (req, res) => {
 
     await newUser.save();
 
-    // Create profile for the new user
-    const newProfile = new Profile({
-      userId: newUser._id,
-      firstName,
-      lastName,
-      phone,
-      email,
-      address: typeof address === 'object' ? JSON.stringify(address) : address
-    });
-
-    await newProfile.save();
-
     const token = createToken(newUser._id);
 
+    // Send verification email
     try {
       await sendVerificationEmail(email, verificationToken);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
+      // Consider whether to delete the user if email fails
+      // await User.findByIdAndDelete(newUser._id);
+      // return res.status(500).json({ success: false, message: "Failed to send verification email. Please try again." });
     }
 
     res.status(201).json({
@@ -117,9 +117,12 @@ const registerUser = async (req, res) => {
       user: {
         id: newUser._id,
         email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        phone: newUser.phone,
+        address: newUser.address,
         isVerified: newUser.isVerified
-      },
-      profile: newProfile
+      }
     });
 
   } catch (error) {
@@ -161,13 +164,13 @@ const loginUser = async (req, res) => {
 
     const token = createToken(user._id);
 
+    // Send login notification email
     try {
       await sendLoginNotificationEmail(email);
     } catch (emailError) {
       console.error('Failed to send login notification email:', emailError);
+      // Decide whether to proceed with login if email fails
     }
-
-    const profile = await Profile.findOne({ userId: user._id });
 
     res.status(200).json({
       success: true,
@@ -176,9 +179,10 @@ const loginUser = async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         isVerified: user.isVerified
-      },
-      profile
+      }
     });
   } catch (error) {
     console.error('Error during login:', error);
@@ -187,6 +191,47 @@ const loginUser = async (req, res) => {
       message: error.message || "An unexpected error occurred",
       error: process.env.NODE_ENV === 'development' ? error : undefined
     });
+  }
+};
+
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      sendAlert(`Profile fetch attempt for non-existent user ID: ${req.user.id}`);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    sendAlert(`Error fetching user profile: ${error.message}`);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
+const updateUserProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, address } = req.body;
+    const updateFields = {};
+    if (firstName) updateFields.firstName = firstName;
+    if (lastName) updateFields.lastName = lastName;
+    if (phone) updateFields.phone = phone;
+    if (address) updateFields.address = address;
+
+    if (req.file) {
+      updateFields.avatar = `/uploads/${req.file.filename}`;
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updateFields, { new: true }).select('-password');
+    if (!user) {
+      sendAlert(`Update attempt for non-existent user ID: ${req.user.id}`);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({ success: true, message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    sendAlert(`Error updating user profile: ${error.message}`);
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
 
@@ -225,9 +270,56 @@ const refreshToken = async (req, res) => {
   }
 };
 
+const mergeCart = async (req, res) => {
+  const { localCart } = req.body;
+  const isDev = process.env.NODE_ENV === 'development';
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      sendAlert('User not found', isDev);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Initialize cartData if it doesn't exist
+    if (!user.cartData) {
+      user.cartData = [];
+    }
+
+    for (const localItem of localCart) {
+      if (localItem && localItem.id) {
+        const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
+        if (existingItemIndex > -1) {
+          user.cartData[existingItemIndex].quantity += localItem.quantity;
+        } else {
+          user.cartData.push({
+            id: localItem.id,
+            name: localItem.name,
+            price: localItem.price,
+            image: localItem.image,
+            quantity: localItem.quantity
+          });
+        }
+      } else {
+        sendAlert(`Invalid item in localCart: ${JSON.stringify(localItem)}`, isDev);
+      }
+    }
+
+    await user.save();
+    sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
+    res.json({ success: true, cartData: user.cartData });
+  } catch (error) {
+    sendAlert(`Error in mergeCart: ${error.message}`, isDev);
+    res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  getUserProfile,
+  updateUserProfile,
   verifyEmail,
-  refreshToken
+  refreshToken,
+  mergeCart
 };
