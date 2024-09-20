@@ -44,6 +44,11 @@ const updateProfile = async (req, res) => {
       
       await profile.save();
       
+      // Update the user document with the profile image
+      if (imagePath) {
+        await User.findByIdAndUpdate(user._id, { profileImage: imagePath });
+      }
+      
       const updatedProfile = await Profile.findOne({ userId: user._id });
       console.log("Updated profile before sending:", updatedProfile);
       
@@ -69,6 +74,12 @@ const getProfile = async (req, res) => {
     
     if (!profile) {
       profile = new Profile({ userId: user._id });
+      await profile.save();
+    }
+    
+    // If the profile doesn't have an image, check the user document
+    if (!profile.image && user.profileImage) {
+      profile.image = user.profileImage;
       await profile.save();
     }
     
