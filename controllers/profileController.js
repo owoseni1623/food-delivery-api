@@ -1,4 +1,3 @@
-const User = require("../models/User");
 const Profile = require("../models/Profile");
 const Order = require("../models/Order");
 const multer = require('multer');
@@ -22,18 +21,18 @@ const updateProfile = async (req, res) => {
       console.error("File upload error:", err);
       return res.status(400).json({ success: false, message: 'File upload error', error: err.message });
     }
-    
+   
     try {
       const user = req.user;
       const { firstName, lastName, phone, address, email } = req.body;
       let imagePath = req.file ? `/uploads/${req.file.filename}` : undefined;
-      
+     
       let profile = await Profile.findOne({ userId: user._id });
-      
+     
       if (!profile) {
         profile = new Profile({ userId: user._id });
       }
-      
+     
       // Update profile fields
       if (firstName) profile.firstName = firstName;
       if (lastName) profile.lastName = lastName;
@@ -41,12 +40,12 @@ const updateProfile = async (req, res) => {
       if (address) profile.address = address;
       if (email) profile.email = email;
       if (imagePath) profile.image = imagePath;
-      
+     
       await profile.save();
-      
+     
       const updatedProfile = await Profile.findOne({ userId: user._id });
       console.log("Updated profile before sending:", updatedProfile);
-      
+     
       res.json({
         success: true,
         profile: {
@@ -66,12 +65,12 @@ const getProfile = async (req, res) => {
   try {
     const user = req.user;
     let profile = await Profile.findOne({ userId: user._id });
-    
+   
     if (!profile) {
       profile = new Profile({ userId: user._id });
       await profile.save();
     }
-    
+   
     res.json({
       success: true,
       profile: {
