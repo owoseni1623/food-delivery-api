@@ -5,55 +5,13 @@ const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
 const sendAlert = (message) => {
-  console.log('ALERT:', message);
+  if (process.env.NODE_ENV === 'production') {
+    console.log('ALERT:', message);
+  }
 };
 
 const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-};
-
-const sendEmail = async (to, subject, htmlContent) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to,
-    subject,
-    html: htmlContent
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent successfully to: ${to}`);
-    sendAlert(`Email sent to: ${to}`);
-  } catch (emailError) {
-    console.error('Error sending email:', emailError);
-    sendAlert(`Error sending email to: ${to}. Error: ${emailError.message}`);
-    throw emailError; // Rethrow the error to be caught in the calling function
-  }
-};
-
-const sendVerificationEmail = async (email, verificationToken) => {
-  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-  const htmlContent = `
-    <h1>Welcome to Our App!</h1>
-    <p>Thank you for registering. Your account has been created successfully.</p>
-    <p>To verify your email address, please click on the link below:</p>
-    <a href="${verificationUrl}">Verify Your Email</a>
-    <p>This link will expire in 24 hours.</p>
-    <p>If you didn't create an account, please ignore this email.</p>
-  `;
-  
-  await sendEmail(email, 'Welcome! Please Verify Your Email', htmlContent);
-};
-
-const sendLoginNotificationEmail = async (email) => {
-  const htmlContent = `
-    <h1>New Login to Your Account</h1>
-    <p>We detected a new login to your account.</p>
-    <p>If this was you, no action is needed.</p>
-    <p>If you didn't log in, please secure your account immediately.</p>
-  `;
-  
-  await sendEmail(email, 'New Login Detected', htmlContent);
 };
 
 const registerUser = async (req, res) => {
@@ -85,14 +43,8 @@ const registerUser = async (req, res) => {
       firstName,
       lastName,
       phone,
-      address: {
-        street: address?.street,
-        city: address?.city,
-        state: address?.state,
-        country: address?.country
-      },
+      address,
       verificationToken,
-      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
       isVerified: false,
     });
 
@@ -101,27 +53,32 @@ const registerUser = async (req, res) => {
     const token = createToken(newUser._id);
 
     // Send verification email
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Email Verification',
+      text: `Please verify your email by clicking the link: ${verificationUrl}`
+    };
+
     try {
-      await sendVerificationEmail(email, verificationToken);
+      await transporter.sendMail(mailOptions);
+      console.log('Verification email sent successfully');
+      sendAlert(`Verification email sent to: ${email}`);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Consider whether to delete the user if email fails
-      // await User.findByIdAndDelete(newUser._id);
-      // return res.status(500).json({ success: false, message: "Failed to send verification email. Please try again." });
+      console.error('Error sending verification email:', emailError);
+      sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
     }
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully. Please check your email for verification.",
+      message: "User registered successfully. If you don't receive a verification email, please contact support.",
       token,
       user: {
         id: newUser._id,
         email: newUser.email,
         firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        phone: newUser.phone,
-        address: newUser.address,
-        isVerified: newUser.isVerified
+        lastName: newUser.lastName
       }
     });
 
@@ -163,15 +120,6 @@ const loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id);
-
-    // Send login notification email
-    try {
-      await sendLoginNotificationEmail(email);
-    } catch (emailError) {
-      console.error('Failed to send login notification email:', emailError);
-      // Decide whether to proceed with login if email fails
-    }
-
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -180,8 +128,7 @@ const loginUser = async (req, res) => {
         id: user._id,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName,
-        isVerified: user.isVerified
+        lastName: user.lastName
       }
     });
   } catch (error) {
@@ -238,20 +185,13 @@ const updateUserProfile = async (req, res) => {
 const verifyEmail = async (req, res) => {
   const { token } = req.params;
   try {
-    const user = await User.findOne({ 
-      verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() }
-    });
-
+    const user = await User.findOne({ verificationToken: token });
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired verification token" });
+      return res.status(400).json({ success: false, message: "Invalid verification token" });
     }
-
     user.isVerified = true;
     user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
     await user.save();
-
     res.status(200).json({ success: true, message: "Email verified successfully" });
   } catch (error) {
     console.error('Error during email verification:', error);
