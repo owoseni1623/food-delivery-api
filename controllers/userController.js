@@ -14,6 +14,32 @@ const createToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
+const sendVerificationEmail = async (email, verificationToken) => {
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Welcome! Please Verify Your Email',
+    html: `
+      <h1>Welcome to Our App!</h1>
+      <p>Thank you for registering. Your account has been created successfully.</p>
+      <p>To verify your email address, please click on the link below:</p>
+      <a href="${verificationUrl}">Verify Your Email</a>
+      <p>This link will expire in 24 hours.</p>
+      <p>If you didn't create an account, please ignore this email.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Verification email sent successfully');
+    sendAlert(`Verification email sent to: ${email}`);
+  } catch (emailError) {
+    console.error('Error sending verification email:', emailError);
+    sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
+  }
+};
+
 const registerUser = async (req, res) => {
   console.log("Received registration data:", req.body);
 
@@ -45,6 +71,7 @@ const registerUser = async (req, res) => {
       phone,
       address,
       verificationToken,
+      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
       isVerified: false,
     });
 
@@ -53,32 +80,18 @@ const registerUser = async (req, res) => {
     const token = createToken(newUser._id);
 
     // Send verification email
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Email Verification',
-      text: `Please verify your email by clicking the link: ${verificationUrl}`
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log('Verification email sent successfully');
-      sendAlert(`Verification email sent to: ${email}`);
-    } catch (emailError) {
-      console.error('Error sending verification email:', emailError);
-      sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
-    }
+    await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully. If you don't receive a verification email, please contact support.",
+      message: "User registered successfully. Please check your email for verification.",
       token,
       user: {
         id: newUser._id,
         email: newUser.email,
         firstName: newUser.firstName,
-        lastName: newUser.lastName
+        lastName: newUser.lastName,
+        isVerified: newUser.isVerified
       }
     });
 
@@ -128,7 +141,8 @@ const loginUser = async (req, res) => {
         id: user._id,
         email: user.email,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        isVerified: user.isVerified
       }
     });
   } catch (error) {
@@ -185,13 +199,20 @@ const updateUserProfile = async (req, res) => {
 const verifyEmail = async (req, res) => {
   const { token } = req.params;
   try {
-    const user = await User.findOne({ verificationToken: token });
+    const user = await User.findOne({ 
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() }
+    });
+
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid verification token" });
+      return res.status(400).json({ success: false, message: "Invalid or expired verification token" });
     }
+
     user.isVerified = true;
     user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
     await user.save();
+
     res.status(200).json({ success: true, message: "Email verified successfully" });
   } catch (error) {
     console.error('Error during email verification:', error);
