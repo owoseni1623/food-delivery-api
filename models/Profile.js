@@ -15,22 +15,10 @@ const profileSchema = new mongoose.Schema({
     image: {
         type: String,
         default: null
-    },
-    imageUrl: {
-        type: String,
-        default: null
     }
 }, { 
     minimize: false,
     timestamps: true 
-});
-
-// Pre-save hook to ensure imageUrl is always set when image is present
-profileSchema.pre('save', function(next) {
-    if (this.image) {
-        this.imageUrl = `/uploads/${this.image}`;
-    }
-    next();
 });
 
 // Virtual for full name
