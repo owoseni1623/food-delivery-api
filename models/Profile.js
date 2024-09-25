@@ -21,12 +21,10 @@ const profileSchema = new mongoose.Schema({
     timestamps: true 
 });
 
-// Virtual for full name
 profileSchema.virtual('fullName').get(function() {
     return `${this.firstName} ${this.lastName}`;
 });
 
-// Method to get public profile
 profileSchema.methods.getPublicProfile = function() {
     const publicProfile = this.toObject();
     delete publicProfile.userId;

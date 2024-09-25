@@ -3,8 +3,8 @@ const Profile = require("../models/Profile");
 const Order = require("../models/Order");
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
-// Set up multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -34,23 +34,29 @@ const updateProfile = async (req, res) => {
         profile = new Profile({ userId: user._id });
       }
       
-      // Update profile fields
       if (firstName) profile.firstName = firstName;
       if (lastName) profile.lastName = lastName;
       if (phone) profile.phone = phone;
       if (address) profile.address = address;
       if (email) profile.email = email;
-      if (imagePath) profile.image = imagePath;
+      if (imagePath) {
+        // Remove old image if it exists
+        if (profile.image) {
+          const oldImagePath = path.join(__dirname, '..', profile.image);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        }
+        profile.image = imagePath;
+      }
       
       await profile.save();
       
-      // Update the user document with the profile image
       if (imagePath) {
         await User.findByIdAndUpdate(user._id, { profileImage: imagePath });
       }
       
       const updatedProfile = await Profile.findOne({ userId: user._id });
-      console.log("Updated profile before sending:", updatedProfile);
       
       res.json({
         success: true,
@@ -77,7 +83,6 @@ const getProfile = async (req, res) => {
       await profile.save();
     }
     
-    // If the profile doesn't have an image, check the user document
     if (!profile.image && user.profileImage) {
       profile.image = user.profileImage;
       await profile.save();
@@ -106,4 +111,4 @@ const getOrderHistory = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, getOrderHistory };
+module.exports = { updateProfile, getProfile, getOrderHistory };

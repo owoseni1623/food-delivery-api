@@ -1,11 +1,10 @@
 const express = require('express');
-const { getProfile, updateProfile, getOrderHistory } = require("../controllers/profileController");
-const authMiddleware = require('../middleware/authMiddleware');
-
 const router = express.Router();
+const { updateProfile, getProfile, getOrderHistory } = require('../controllers/profileController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 router.get('/get', authMiddleware, getProfile);
 router.post('/update', authMiddleware, updateProfile);
-router.get('/orders', authMiddleware, getOrderHistory);
+router.get('/order-history', authMiddleware, getOrderHistory);
 
 module.exports = router;
