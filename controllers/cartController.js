@@ -131,6 +131,37 @@ const cartController = {
       console.error('Error merging cart:', error);
       res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
     }
+  },
+
+  // New method to sync cart with localStorage
+  syncCart: async (req, res) => {
+    try {
+      const { localCart } = req.body;
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Merge localCart with database cart
+      const mergedCart = [...user.cartData];
+      for (const localItem of localCart) {
+        const existingItemIndex = mergedCart.findIndex(item => item.id === localItem.id);
+        if (existingItemIndex > -1) {
+          mergedCart[existingItemIndex].quantity = Math.max(mergedCart[existingItemIndex].quantity, localItem.quantity);
+        } else {
+          mergedCart.push(localItem);
+        }
+      }
+
+      user.cartData = mergedCart;
+      await user.save();
+
+      res.json({ success: true, cartData: user.cartData });
+    } catch (error) {
+      console.error('Error syncing cart:', error);
+      res.status(500).json({ success: false, message: "Error syncing cart", error: error.message });
+    }
   }
 };
 
