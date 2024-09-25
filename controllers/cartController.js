@@ -1,167 +1,137 @@
 const User = require('../models/User');
 
-const sendAlert = (message, isDev) => {
-  if (isDev) {
-    console.log('DEV ALERT:', message);
-  } else {
-    console.log('PROD ALERT:', message);
-  }
-};
+const cartController = {
+  addToCart: async (req, res) => {
+    try {
+      const { id, name, price, image, quantity } = req.body;
+      const user = await User.findById(req.user.id);
 
-exports.getCart = async (req, res) => {
-  const isDev = process.env.NODE_ENV === 'development';
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    sendAlert(`Cart data retrieved: ${JSON.stringify(user.cartData)}`, isDev);
-    res.json({ success: true, cartData: user.cartData });
-  } catch (error) {
-    sendAlert(`Error in getCart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Error fetching cart", error: error.message });
-  }
-};
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
 
-exports.addToCart = async (req, res) => {
-  const { id, name, price, image, quantity } = req.body;
-  const isDev = process.env.NODE_ENV === 'development';
+      const existingItemIndex = user.cartData.findIndex(item => item.id === id);
 
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+      if (existingItemIndex > -1) {
+        user.cartData[existingItemIndex].quantity += quantity;
+      } else {
+        user.cartData.push({ id, name, price, image, quantity });
+      }
 
-    const existingItemIndex = user.cartData.findIndex(item => item.id === id);
-    let imageUrl = image;
-
-    if (image && !image.startsWith('http')) {
-      const apiUrl = `${req.protocol}://${req.get('host')}`;
-      imageUrl = `${apiUrl}/uploads/${image.split('/').pop()}`;
-    }
-
-    if (existingItemIndex > -1) {
-      user.cartData[existingItemIndex].quantity += quantity;
-    } else {
-      user.cartData.push({ id, name, price, quantity, image: imageUrl });
-    }
-
-    await user.save();
-    sendAlert(`Added to cart: ${name}`, isDev);
-    res.status(200).json({ success: true, message: "Product added to cart", cartData: user.cartData });
-  } catch (error) {
-    sendAlert(`Error adding to cart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Server Error", error: error.message });
-  }
-};
-
-exports.removeFromCart = async (req, res) => {
-  const isDev = process.env.NODE_ENV === 'development';
-  try {
-    const userId = req.user.id;
-    const { itemId } = req.body;
-    let user = await User.findById(userId);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    const itemIndex = user.cartData.findIndex(item => item.id === itemId);
-    if (itemIndex > -1) {
-      user.cartData.splice(itemIndex, 1);
       await user.save();
-      sendAlert(`Removed item from cart: ${itemId}`, isDev);
       res.json({ success: true, cartData: user.cartData });
-    } else {
-      sendAlert(`Item not found in cart: ${itemId}`, isDev);
-      return res.status(404).json({ success: false, message: "Item not found in cart" });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      res.status(500).json({ success: false, message: "Error adding to cart", error: error.message });
     }
-  } catch (error) {
-    sendAlert(`Error in removeFromCart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Error removing from cart", error: error.message });
-  }
-};
+  },
 
-exports.updateQuantity = async (req, res) => {
-  const { itemId, change } = req.body;
-  const isDev = process.env.NODE_ENV === 'development';
+  removeFromCart: async (req, res) => {
+    try {
+      const { itemId } = req.body;
+      const user = await User.findById(req.user.id);
 
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: 'User not found' });
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      user.cartData = user.cartData.filter(item => item.id !== itemId);
+      await user.save();
+
+      res.json({ success: true, cartData: user.cartData });
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      res.status(500).json({ success: false, message: "Error removing from cart", error: error.message });
     }
+  },
 
-    const itemIndex = user.cartData.findIndex(item => item.id === itemId);
-    if (itemIndex > -1) {
+  getCart: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      res.json({ success: true, cartData: user.cartData });
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      res.status(500).json({ success: false, message: "Error fetching cart", error: error.message });
+    }
+  },
+
+  updateQuantity: async (req, res) => {
+    try {
+      const { itemId, change } = req.body;
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const itemIndex = user.cartData.findIndex(item => item.id === itemId);
+
+      if (itemIndex === -1) {
+        return res.status(404).json({ success: false, message: "Item not found in cart" });
+      }
+
       user.cartData[itemIndex].quantity += change;
+
       if (user.cartData[itemIndex].quantity <= 0) {
-        // Remove the item if quantity becomes zero or negative
         user.cartData.splice(itemIndex, 1);
       }
+
       await user.save();
-      sendAlert(`Cart updated: ${JSON.stringify(user.cartData)}`, isDev);
       res.json({ success: true, cartData: user.cartData });
-    } else {
-      sendAlert(`Item not found in cart: ${itemId}`, isDev);
-      return res.status(404).json({ success: false, message: 'Item not found in cart' });
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      res.status(500).json({ success: false, message: "Error updating quantity", error: error.message });
     }
-  } catch (error) {
-    sendAlert(`Error in updateQuantity: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: 'Error updating cart', error: error.message });
-  }
-};
+  },
 
-exports.clearCart = async (req, res) => {
-  const isDev = process.env.NODE_ENV === 'development';
-  try {
-    const userId = req.user.id;
-    let user = await User.findById(userId);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+  clearCart: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id);
 
-    user.cartData = [];
-    await user.save();
-    sendAlert(`Cart cleared for user: ${userId}`, isDev);
-    res.json({ success: true, message: "Cart cleared successfully" });
-  } catch (error) {
-    sendAlert(`Error in clearCart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Error clearing cart", error: error.message });
-  }
-};
-
-exports.mergeCart = async (req, res) => {
-  const { localCart } = req.body;
-  const isDev = process.env.NODE_ENV === 'development';
-
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      sendAlert('User not found', isDev);
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Merge the local cart with the user's cart in the database
-    for (const localItem of localCart) {
-      const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
-      if (existingItemIndex > -1) {
-        user.cartData[existingItemIndex].quantity += localItem.quantity;
-      } else {
-        user.cartData.push(localItem);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
       }
-    }
 
-    await user.save();
-    sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
-    res.json({ success: true, cartData: user.cartData });
-  } catch (error) {
-    sendAlert(`Error in mergeCart: ${error.message}`, isDev);
-    res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
+      user.cartData = [];
+      await user.save();
+
+      res.json({ success: true, message: "Cart cleared successfully" });
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      res.status(500).json({ success: false, message: "Error clearing cart", error: error.message });
+    }
+  },
+
+  mergeCart: async (req, res) => {
+    try {
+      const { localCart } = req.body;
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      for (const localItem of localCart) {
+        const existingItemIndex = user.cartData.findIndex(item => item.id === localItem.id);
+        if (existingItemIndex > -1) {
+          user.cartData[existingItemIndex].quantity += localItem.quantity;
+        } else {
+          user.cartData.push(localItem);
+        }
+      }
+
+      await user.save();
+      res.json({ success: true, cartData: user.cartData });
+    } catch (error) {
+      console.error('Error merging cart:', error);
+      res.status(500).json({ success: false, message: "Error merging cart", error: error.message });
+    }
   }
 };
+
+module.exports = cartController;
