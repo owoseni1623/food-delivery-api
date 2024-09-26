@@ -40,7 +40,10 @@ const updateProfile = async (req, res) => {
       if (firstName) profile.firstName = firstName;
       if (lastName) profile.lastName = lastName;
       if (phone) profile.phone = phone;
-      if (address) profile.address = address;
+      if (address) {
+        // Ensure address is an object
+        profile.address = typeof address === 'string' ? JSON.parse(address) : address;
+      }
       if (email) profile.email = email;
       
       if (imagePath) {
@@ -56,25 +59,20 @@ const updateProfile = async (req, res) => {
       
       await profile.save();
       
-      // Update user model with new image path
+      // Update user model
+      const updateData = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address: profile.address
+      };
+      
       if (imagePath) {
-        await User.findByIdAndUpdate(user._id, { 
-          profileImage: imagePath,
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone,
-          address: address
-        });
-      } else {
-        await User.findByIdAndUpdate(user._id, { 
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone,
-          address: address
-        });
+        updateData.profileImage = imagePath;
       }
+      
+      await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
       
       const updatedProfile = await Profile.findOne({ userId: user._id });
       
