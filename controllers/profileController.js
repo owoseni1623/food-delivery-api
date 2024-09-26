@@ -37,11 +37,11 @@ const updateProfile = async (req, res) => {
       }
       
       // Update profile fields
-      if (firstName) profile.firstName = firstName;
-      if (lastName) profile.lastName = lastName;
-      if (phone) profile.phone = phone;
-      if (address) profile.address = address; // Store address as a string
-      if (email) profile.email = email;
+      if (firstName !== undefined) profile.firstName = firstName;
+      if (lastName !== undefined) profile.lastName = lastName;
+      if (phone !== undefined) profile.phone = phone;
+      if (address !== undefined) profile.address = address;
+      if (email !== undefined) profile.email = email;
       
       if (imagePath) {
         // Remove old image if it exists
@@ -68,6 +68,9 @@ const updateProfile = async (req, res) => {
       if (imagePath) {
         updateData.profileImage = imagePath;
       }
+      
+      // Only update fields that are not undefined
+      Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
       
       await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
       
@@ -101,11 +104,6 @@ const getProfile = async (req, res) => {
         address: user.address,
         image: user.profileImage
       });
-      await profile.save();
-    }
-    
-    if (!profile.image && user.profileImage) {
-      profile.image = user.profileImage;
       await profile.save();
     }
     
