@@ -1,20 +1,17 @@
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
 const User = require("../models/User");
 const Profile = require("../models/Profile");
 const Order = require("../models/Order");
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '..', 'public', 'uploads');
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
+    cb(null, 'uploads/');
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, Date.now() + path.extname(file.originalname));
   }
 });
 
@@ -31,7 +28,7 @@ const updateProfile = async (req, res) => {
     try {
       const user = req.user;
       const { firstName, lastName, phone, address, email } = req.body;
-      let imagePath = req.file ? '/uploads/' + req.file.filename : undefined;
+      let imagePath = req.file ? `/uploads/${req.file.filename}` : undefined;
       
       let profile = await Profile.findOne({ userId: user._id });
       
@@ -49,7 +46,7 @@ const updateProfile = async (req, res) => {
       if (imagePath) {
         // Remove old image if it exists
         if (profile.image) {
-          const oldImagePath = path.join(__dirname, '..', 'public', profile.image);
+          const oldImagePath = path.join(__dirname, '..', profile.image);
           if (fs.existsSync(oldImagePath)) {
             fs.unlinkSync(oldImagePath);
           }
@@ -75,19 +72,13 @@ const updateProfile = async (req, res) => {
       // Only update fields that are not undefined
       Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
       
-      const updatedUser = await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
+      await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
       
       const updatedProfile = await Profile.findOne({ userId: user._id });
       
       res.json({
         success: true,
         profile: updatedProfile.getPublicProfile(),
-        user: {
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
-          email: updatedUser.email,
-          profileImage: updatedUser.profileImage
-        },
         message: 'Profile updated successfully'
       });
     } catch (error) {
