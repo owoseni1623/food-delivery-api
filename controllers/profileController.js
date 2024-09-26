@@ -1,17 +1,20 @@
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const User = require("../models/User");
 const Profile = require("../models/Profile");
 const Order = require("../models/Order");
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    const uploadPath = path.join(__dirname, '..', 'public', 'uploads');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -46,7 +49,7 @@ const updateProfile = async (req, res) => {
       if (imagePath) {
         // Remove old image if it exists
         if (profile.image) {
-          const oldImagePath = path.join(__dirname, '..', profile.image);
+          const oldImagePath = path.join(__dirname, '..', 'public', profile.image);
           if (fs.existsSync(oldImagePath)) {
             fs.unlinkSync(oldImagePath);
           }
