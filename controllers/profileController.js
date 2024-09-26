@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -16,6 +17,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage }).single('image');
 
+// Update profile function
 const updateProfile = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -34,11 +36,13 @@ const updateProfile = async (req, res) => {
         profile = new Profile({ userId: user._id });
       }
       
+      // Update profile fields
       if (firstName) profile.firstName = firstName;
       if (lastName) profile.lastName = lastName;
       if (phone) profile.phone = phone;
       if (address) profile.address = address;
       if (email) profile.email = email;
+      
       if (imagePath) {
         // Remove old image if it exists
         if (profile.image) {
@@ -52,8 +56,24 @@ const updateProfile = async (req, res) => {
       
       await profile.save();
       
+      // Update user model with new image path
       if (imagePath) {
-        await User.findByIdAndUpdate(user._id, { profileImage: imagePath });
+        await User.findByIdAndUpdate(user._id, { 
+          profileImage: imagePath,
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: phone,
+          address: address
+        });
+      } else {
+        await User.findByIdAndUpdate(user._id, { 
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: phone,
+          address: address
+        });
       }
       
       const updatedProfile = await Profile.findOne({ userId: user._id });
@@ -73,13 +93,22 @@ const updateProfile = async (req, res) => {
   });
 };
 
+// Get profile function
 const getProfile = async (req, res) => {
   try {
     const user = req.user;
     let profile = await Profile.findOne({ userId: user._id });
     
     if (!profile) {
-      profile = new Profile({ userId: user._id });
+      profile = new Profile({
+        userId: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        image: user.profileImage
+      });
       await profile.save();
     }
     
@@ -101,6 +130,7 @@ const getProfile = async (req, res) => {
   }
 };
 
+// Get order history function
 const getOrderHistory = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
