@@ -23,8 +23,10 @@ const userSchema = new mongoose.Schema({
     required: false
   },
   address: {
-    type: String,
-    required: false
+    street: String,
+    city: String,
+    state: String,
+    country: String
   },
   role: {
     type: String,
@@ -53,6 +55,9 @@ const userSchema = new mongoose.Schema({
   },
   verificationTokenExpires: {
     type: Date
+  },
+  avatar: {
+    type: String
   },
   profileImage: {
     type: String
