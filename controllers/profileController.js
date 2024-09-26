@@ -31,7 +31,7 @@ const updateProfile = async (req, res) => {
     try {
       const user = req.user;
       const { firstName, lastName, phone, address, email } = req.body;
-      let imagePath = req.file ? `/uploads/${req.file.filename}` : undefined;
+      let imagePath = req.file ? '/uploads/' + req.file.filename : undefined;
       
       let profile = await Profile.findOne({ userId: user._id });
       
