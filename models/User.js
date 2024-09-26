@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const addressSchema = new mongoose.Schema({
+  street: String,
+  city: String,
+  state: String,
+  country: String
+});
+
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
@@ -22,12 +29,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false
   },
-  address: {
-    street: String,
-    city: String,
-    state: String,
-    country: String
-  },
+  address: addressSchema,
   role: {
     type: String,
     default: "client"
@@ -56,13 +58,11 @@ const userSchema = new mongoose.Schema({
   verificationTokenExpires: {
     type: Date
   },
-  avatar: {
-    type: String
-  },
   profileImage: {
     type: String
   }
 }, {minimize: false});
 
 const User = mongoose.model("User", userSchema);
+
 module.exports = User;

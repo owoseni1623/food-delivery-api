@@ -166,7 +166,7 @@ const updateUserProfile = async (req, res) => {
     if (address) updateFields.address = address;
 
     if (req.file) {
-      updateFields.avatar = `/uploads/${req.file.filename}`;
+      updateFields.profileImage = `/uploads/${req.file.filename}`;
     }
 
     const user = await User.findByIdAndUpdate(req.user.id, updateFields, { new: true }).select('-password');
