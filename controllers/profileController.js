@@ -40,10 +40,7 @@ const updateProfile = async (req, res) => {
       if (firstName) profile.firstName = firstName;
       if (lastName) profile.lastName = lastName;
       if (phone) profile.phone = phone;
-      if (address) {
-        // Ensure address is an object
-        profile.address = typeof address === 'string' ? JSON.parse(address) : address;
-      }
+      if (address) profile.address = address; // Store address as a string
       if (email) profile.email = email;
       
       if (imagePath) {
@@ -65,7 +62,7 @@ const updateProfile = async (req, res) => {
         lastName,
         email,
         phone,
-        address: profile.address
+        address
       };
       
       if (imagePath) {
@@ -78,10 +75,7 @@ const updateProfile = async (req, res) => {
       
       res.json({
         success: true,
-        profile: {
-          ...updatedProfile.toObject(),
-          image: updatedProfile.image ? `${req.protocol}://${req.get('host')}${updatedProfile.image}` : null
-        },
+        profile: updatedProfile.getPublicProfile(),
         message: 'Profile updated successfully'
       });
     } catch (error) {
@@ -117,10 +111,7 @@ const getProfile = async (req, res) => {
     
     res.json({
       success: true,
-      profile: {
-        ...profile.toObject(),
-        image: profile.image ? `${req.protocol}://${req.get('host')}${profile.image}` : null
-      }
+      profile: profile.getPublicProfile()
     });
   } catch (error) {
     console.error("Error in getProfile:", error);
