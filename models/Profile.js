@@ -1,60 +1,51 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    trim: true
-  },
-  lastName: {
-    type: String,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: true
-  },
-  phone: {
-    type: String,
-    trim: true
-  },
-  address: {
-    type: String,
-    trim: true
-  },
-  role: {
-    type: String,
-    default: "client"
-  },
-  cartData: {
-    type: [{
-      id: String,
-      name: String,
-      price: Number,
-      quantity: Number,
-      image: String,
-    }],
-    default: []
-  },
-  orderHistory: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order'
-  }],
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  verificationToken: String,
-  verificationTokenExpires: Date,
-  profileImage: String
-}, {timestamps: true});
+const profileSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique: true
+    },
+    firstName: {
+        type: String,
+        trim: true
+    },
+    lastName: {
+        type: String,
+        trim: true
+    },
+    phone: {
+        type: String,
+        trim: true
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true
+    },
+    address: {
+        type: String,
+        trim: true
+    },
+    image: {
+        type: String,
+        default: null
+    }
+}, { 
+    timestamps: true 
+});
 
-const User = mongoose.model("User", userSchema);
+profileSchema.virtual('fullName').get(function() {
+    return `${this.firstName} ${this.lastName}`.trim();
+});
 
-module.exports = User;
+profileSchema.methods.getPublicProfile = function() {
+    const publicProfile = this.toObject();
+    delete publicProfile.userId;
+    return publicProfile;
+};
+
+const Profile = mongoose.model("Profile", profileSchema);
+
+module.exports = Profile;

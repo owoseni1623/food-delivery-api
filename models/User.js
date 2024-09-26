@@ -1,25 +1,20 @@
 const mongoose = require('mongoose');
 
-const addressSchema = new mongoose.Schema({
-  street: String,
-  city: String,
-  state: String,
-  country: String
-});
-
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: false
+    trim: true
   },
   lastName: {
     type: String,
-    required: false
+    trim: true
   },
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    trim: true,
+    lowercase: true
   },
   password: {
     type: String,
@@ -27,9 +22,12 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: false
+    trim: true
   },
-  address: addressSchema,
+  address: {
+    type: String,
+    trim: true
+  },
   role: {
     type: String,
     default: "client"
@@ -52,16 +50,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  verificationToken: {
-    type: String
-  },
-  verificationTokenExpires: {
-    type: Date
-  },
-  profileImage: {
-    type: String
-  }
-}, {minimize: false});
+  verificationToken: String,
+  verificationTokenExpires: Date,
+  profileImage: String
+}, {timestamps: true});
 
 const User = mongoose.model("User", userSchema);
 
