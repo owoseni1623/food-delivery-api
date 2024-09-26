@@ -72,13 +72,19 @@ const updateProfile = async (req, res) => {
       // Only update fields that are not undefined
       Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
       
-      await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
+      const updatedUser = await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
       
       const updatedProfile = await Profile.findOne({ userId: user._id });
       
       res.json({
         success: true,
         profile: updatedProfile.getPublicProfile(),
+        user: {
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          email: updatedUser.email,
+          profileImage: updatedUser.profileImage
+        },
         message: 'Profile updated successfully'
       });
     } catch (error) {
