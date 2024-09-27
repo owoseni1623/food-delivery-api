@@ -27,16 +27,16 @@
     "multer": "^1.4.5-lts.1",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^6.9.14",
+    "nodemailer": "^6.9.15",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^5.2.2",
     "uuid": "^10.0.0",
     "winston": "^3.13.0"
   },
-  "description": "",
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
-  }
+  },
+  "description": ""
 }

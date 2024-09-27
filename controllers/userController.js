@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
+const emailService = require('../config/emailService'); // New import
 
 const sendAlert = (message) => {
   if (process.env.NODE_ENV === 'production') {
@@ -70,6 +71,9 @@ const registerUser = async (req, res) => {
       sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
     }
 
+    // Send registration email using the new email service
+    await emailService.sendRegistrationEmail(email, firstName);
+
     res.status(201).json({
       success: true,
       message: "User registered successfully. If you don't receive a verification email, please contact support.",
@@ -120,6 +124,10 @@ const loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id);
+
+    // Send login notification email using the new email service
+    await emailService.sendLoginNotification(email, user.firstName);
+
     res.status(200).json({
       success: true,
       message: "Login successful",
