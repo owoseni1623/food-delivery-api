@@ -1,12 +1,12 @@
 const User = require("../models/User");
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const transporter = require('../config/nodemailer');
 const { v4: uuidv4 } = require('uuid');
-const emailService = require('../services/emailService');
-const notificationService = require('../services/notificationService'); // New import
+const emailService = require('../config/emailService'); // New import
 
-const sendAlert = (message, isDev = false) => {
-  if (process.env.NODE_ENV === 'production' || isDev) {
+const sendAlert = (message) => {
+  if (process.env.NODE_ENV === 'production') {
     console.log('ALERT:', message);
   }
 };
@@ -55,17 +55,28 @@ const registerUser = async (req, res) => {
 
     // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    await emailService.sendVerificationEmail(email, firstName, verificationUrl);
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Email Verification',
+      text: `Please verify your email by clicking the link: ${verificationUrl}`
+    };
 
-    // Send registration email
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Verification email sent successfully');
+      sendAlert(`Verification email sent to: ${email}`);
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      sendAlert(`Error sending verification email to: ${email}. Error: ${emailError.message}`);
+    }
+
+    // Send registration email using the new email service
     await emailService.sendRegistrationEmail(email, firstName);
-
-    // Send welcome notification
-    await notificationService.sendNotification(newUser._id, 'Welcome to our platform!', 'We\'re glad to have you on board.');
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully. Please check your email for verification and welcome messages.",
+      message: "User registered successfully. If you don't receive a verification email, please contact support.",
       token,
       user: {
         id: newUser._id,
@@ -114,15 +125,12 @@ const loginUser = async (req, res) => {
 
     const token = createToken(user._id);
 
-    // Send login notification email
+    // Send login notification email using the new email service
     await emailService.sendLoginNotification(email, user.firstName);
-
-    // Send login notification
-    await notificationService.sendNotification(user._id, 'New login detected', `A new login was detected for your account on ${new Date().toLocaleString()}`);
 
     res.status(200).json({
       success: true,
-      message: "Login successful. A notification has been sent to your email.",
+      message: "Login successful",
       token,
       user: {
         id: user._id,
@@ -174,10 +182,6 @@ const updateUserProfile = async (req, res) => {
       sendAlert(`Update attempt for non-existent user ID: ${req.user.id}`);
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
-    // Send profile update notification
-    await notificationService.sendNotification(user._id, 'Profile Updated', 'Your profile information has been successfully updated.');
-
     res.status(200).json({ success: true, message: "Profile updated successfully", user });
   } catch (error) {
     console.error('Error updating user profile:', error);
@@ -196,10 +200,6 @@ const verifyEmail = async (req, res) => {
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
-
-    // Send email verification success notification
-    await notificationService.sendNotification(user._id, 'Email Verified', 'Your email has been successfully verified. Thank you!');
-
     res.status(200).json({ success: true, message: "Email verified successfully" });
   } catch (error) {
     console.error('Error during email verification:', error);
@@ -255,10 +255,6 @@ const mergeCart = async (req, res) => {
 
     await user.save();
     sendAlert(`Cart merged for user: ${req.user.id}`, isDev);
-
-    // Send cart update notification
-    await notificationService.sendNotification(user._id, 'Cart Updated', 'Your shopping cart has been updated with items from your local cart.');
-
     res.json({ success: true, cartData: user.cartData });
   } catch (error) {
     sendAlert(`Error in mergeCart: ${error.message}`, isDev);
